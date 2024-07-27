@@ -3,7 +3,7 @@ import glob
 from typing import Iterator, Tuple
 import pyarrow.parquet as pq
 
-from bm43.settings import DATA_DIR
+from mini_coil.settings import DATA_DIR
 
 
 def read_data() -> Iterator[Tuple[str, str, str]]:

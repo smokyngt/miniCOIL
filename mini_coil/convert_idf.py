@@ -6,7 +6,7 @@ import math
 from snowballstemmer import stemmer as get_stemmer
 import pickle
 
-from bm43.settings import DATA_DIR
+from mini_coil.settings import DATA_DIR
 
 
 class IDFVocab:

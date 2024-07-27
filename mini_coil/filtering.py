@@ -4,10 +4,10 @@ import string
 from collections import defaultdict
 from typing import Set, List, Dict
 
-from bm43.convert_idf import IDFVocab
-from bm43.read_data import read_data
-from bm43.settings import DATA_DIR
-from bm43.tokenizer import WordTokenizer
+from mini_coil.convert_idf import IDFVocab
+from mini_coil.read_data import read_data
+from mini_coil.settings import DATA_DIR
+from mini_coil.tokenizer import WordTokenizer
 from snowballstemmer import stemmer as get_stemmer
 
 

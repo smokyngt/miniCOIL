@@ -24,7 +24,7 @@ import gzip
 from typing import Iterable
 
 
-from bm43.settings import DATA_DIR
+from mini_coil.settings import DATA_DIR
 
 
 def iterate_archives() -> Iterable[str]:
