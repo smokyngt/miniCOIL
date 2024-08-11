@@ -10,6 +10,9 @@ class VocabResolver:
         self.vocab = {}
         self.tokenizer = AutoTokenizer.from_pretrained(model_repository)
 
+    def vocab_size(self):
+        return len(self.vocab) + 1
+
     def add_word(self, word):
         if word not in self.vocab:
             self.vocab[word] = len(self.vocab) + 1

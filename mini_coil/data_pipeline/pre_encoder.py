@@ -47,7 +47,7 @@ def download_and_save_onnx(model_repository, model_save_path):
         )
 
 
-class PreEncoder():
+class PreEncoder:
 
     def __init__(self, model_repository: str, model_path: str):
         self.tokenizer = AutoTokenizer.from_pretrained(model_repository)

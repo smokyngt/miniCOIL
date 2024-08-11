@@ -119,7 +119,7 @@ class Encoder(nn.Module):
             ]
         """
         batch_size, seq_len = vocab_ids.size()
-        batch_ids = torch.arange(batch_size).unsqueeze(1).expand(batch_size, seq_len)
+        batch_ids = torch.arange(batch_size, device=vocab_ids.device).unsqueeze(1).expand(batch_size, seq_len)
         return torch.stack((vocab_ids, batch_ids), dim=2)
 
     @classmethod

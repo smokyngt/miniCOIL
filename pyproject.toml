@@ -18,6 +18,7 @@ onnx = "^1.16.2"
 onnxruntime = "^1.18.1"
 transformers = "^4.44.0"
 npy-append-array = "^0.9.16"
+lightning = {extras = ["extra"], version = "^2.4.0"}
 
 
 [build-system]
