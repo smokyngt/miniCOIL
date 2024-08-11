@@ -19,9 +19,9 @@ import numpy as np
 import tqdm
 from npy_append_array import NpyAppendArray
 
-from mini_coil.pre_encoder import PreEncoder
+from mini_coil.data_pipeline.pre_encoder import PreEncoder
 from mini_coil.settings import DATA_DIR
-from mini_coil.vocab_resolver import VocabResolver
+from mini_coil.data_pipeline.vocab_resolver import VocabResolver
 
 
 def read_texts(path: str) -> Iterable[str]:
