@@ -76,7 +76,7 @@ def main():
     batch = reader.read(20, 25)
     print("token_embeddings", batch['token_embeddings'].shape)
     print("text_embeddings", batch['text_embeddings'].shape)
-    print("token_ids", batch['token_ids'].shape)
+    print("token_ids", batch['token_ids'])
 
 
 if __name__ == "__main__":

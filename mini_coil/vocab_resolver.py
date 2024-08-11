@@ -1,5 +1,6 @@
 from typing import Iterable, Tuple, List
 
+import numpy as np
 import torch
 from transformers import AutoTokenizer
 
@@ -13,6 +14,12 @@ class VocabResolver:
         if word not in self.vocab:
             self.vocab[word] = len(self.vocab) + 1
 
+    def load_vocab(self, path):
+        with open(path, "r") as f:
+            for line in f:
+                self.add_word(line.strip())
+
+    @classmethod
     def _reconstruct_bpe(
             self, bpe_tokens: Iterable[Tuple[int, str]]
     ) -> List[Tuple[str, List[int]]]:
@@ -40,7 +47,7 @@ class VocabResolver:
 
         return result
 
-    def token_ids_to_vocab(self, token_ids: torch.Tensor) -> torch.Tensor:
+    def token_ids_to_vocab(self, token_ids: np.ndarray) -> np.ndarray:
         """
         Mark known tokens (including composed tokens) with vocab ids.
 
@@ -66,7 +73,7 @@ class VocabResolver:
 
         return token_ids
 
-    def token_ids_to_vocab_batch(self, token_ids: torch.Tensor) -> torch.Tensor:
+    def token_ids_to_vocab_batch(self, token_ids: np.ndarray) -> np.ndarray:
         """
         Mark known tokens (including composed tokens) with vocab ids.
 
@@ -82,10 +89,45 @@ class VocabResolver:
 
         """
 
-        for i in range(token_ids.size(0)):
+        for i in range(token_ids.shape[0]):
             self.token_ids_to_vocab(token_ids[i])
 
         return token_ids
+
+    def filter(
+            self,
+            token_ids: np.ndarray,
+            token_embeddings: np.ndarray,
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Filter out tokens that are not in the vocab.
+
+        Args:
+            token_ids: (batch_size, seq_len) - list of ids of tokens
+            token_embeddings: (batch_size, seq_len, embedding_size) - embeddings of tokens
+
+        Returns:
+            - number of tokens in each sequence - (batch_size)
+            - filtered and flattened token_ids - (total_tokens_size)
+            - filtered and flattened token_embeddings - (total_tokens_size, embedding_size)
+        """
+
+        # (batch_size, seq_len)
+        filtered_token_ids = self.token_ids_to_vocab_batch(token_ids)
+
+        # (batch_size, seq_len)
+        mask = filtered_token_ids.__ne__(0)
+
+        # (batch_size)
+        num_tokens = mask.sum(axis=1)
+
+        # (total_tokens_size)
+        filtered_token_ids = filtered_token_ids[mask]
+
+        # (total_tokens_size, embedding_size)
+        filtered_token_embeddings = token_embeddings[mask]
+
+        return num_tokens, filtered_token_ids, filtered_token_embeddings
 
 
 def main():
@@ -94,7 +136,7 @@ def main():
     resolver.add_word("bat")
     resolver.add_word("nicolls")
 
-    token_ids = torch.tensor([
+    token_ids = np.array([
         101, 3897, 19332, 12718, 23348,
         1010, 1996, 7151, 2296, 4845,
         2359, 2005, 4234, 1010, 4332,
@@ -103,11 +145,11 @@ def main():
 
     token_ids = resolver.token_ids_to_vocab(token_ids)
 
-    expected = torch.tensor([0, 0, 2, 2, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    expected = np.array([0, 0, 2, 2, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 
-    assert torch.equal(token_ids, expected)
+    assert np.all(np.equal(token_ids, expected))
 
-    batch = torch.tensor([
+    batch = np.array([
         [101, 3897, 19332, 12718, 23348],
         [1010, 1996, 7151, 2296, 4845],
         [2359, 2005, 4234, 1010, 4332],
@@ -116,14 +158,14 @@ def main():
 
     batch = resolver.token_ids_to_vocab_batch(batch)
 
-    expected = torch.tensor([
+    expected = np.array([
         [0, 0, 2, 2, 0],
         [0, 0, 1, 0, 0],
         [0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0]
     ])
 
-    assert torch.equal(batch, expected)
+    assert np.all(np.equal(batch, expected))
 
 
 if __name__ == "__main__":

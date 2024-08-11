@@ -21,6 +21,7 @@ from npy_append_array import NpyAppendArray
 
 from mini_coil.pre_encoder import PreEncoder
 from mini_coil.settings import DATA_DIR
+from mini_coil.vocab_resolver import VocabResolver
 
 
 def read_texts(path: str) -> Iterable[str]:
@@ -46,10 +47,15 @@ def main():
     model_repository = "sentence-transformers/all-MiniLM-L6-v2"
     model_save_path = os.path.join(DATA_DIR, "all_miniLM_L6_v2.onnx")
 
+    test_vocab_path = os.path.join(DATA_DIR, "test", "vocab.txt")
+
     test_data_path = os.path.join(DATA_DIR, "test", "bat.txt")
     batch_size = 32
 
     pre_encoder = PreEncoder(model_repository, model_save_path)
+
+    vocab_resolver = VocabResolver(model_repository)
+    vocab_resolver.load_vocab(test_vocab_path)
 
     total_token_emb_offset = 0
     offsets = [0]
@@ -71,22 +77,18 @@ def main():
     for batch in iter_batch(read_texts(test_data_path), batch_size):
         batch_output = pre_encoder.encode(batch)
 
-        batch_offsets = batch_output["number_of_tokens"].tolist()
+        batch_offsets, flattened_vocab_ids, flattened_token_embeddings = vocab_resolver.filter(
+            batch_output["token_ids"],
+            batch_output["token_embeddings"]
+        )
+
+        tokens_np_file.append(flattened_vocab_ids)
+        token_np_emb_file.append(flattened_token_embeddings)
+        text_np_emb_file.append(batch_output["text_embeddings"])
 
         for row_id, offset in enumerate(batch_offsets):
             global_offset = total_token_emb_offset + offset
             offsets.append(global_offset)
-
-            token_emb = batch_output["token_embeddings"][row_id][:offset]
-            token_np_emb_file.append(token_emb)
-
-            text_emb = batch_output["text_embeddings"][row_id]
-            text_emb = text_emb.reshape(1, -1)
-            text_np_emb_file.append(text_emb)
-
-            token_ids = batch_output["token_ids"][row_id][:offset]
-            tokens_np_file.append(token_ids)
-
             total_token_emb_offset = global_offset
 
     offsets = np.array(offsets)
