@@ -14,6 +14,7 @@ it will write directly to disk.
 
 import os
 from typing import Iterable
+import argparse
 
 import numpy as np
 import tqdm
@@ -44,37 +45,53 @@ def iter_batch(iterable, size):
 
 
 def main():
+    input_file = "bat.txt"
+
+    default_input_data_path = os.path.join(DATA_DIR, "test", input_file)
+    default_output_dir = os.path.join(DATA_DIR, "test")
+    default_vocab_path = os.path.join(DATA_DIR, "test", "vocab.txt")
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input-file", type=str, default=default_input_data_path)
+    parser.add_argument("--output-dir", type=str, default=default_output_dir)
+    parser.add_argument('--vocab-path', type=str, default=default_vocab_path)
+    args = parser.parse_args()
+
     model_repository = "sentence-transformers/all-MiniLM-L6-v2"
     model_save_path = os.path.join(DATA_DIR, "all_miniLM_L6_v2.onnx")
 
-    test_vocab_path = os.path.join(DATA_DIR, "test", "vocab.txt")
+    vocab_path = args.vocab_path
 
-    test_data_path = os.path.join(DATA_DIR, "test", "bat.txt")
     batch_size = 32
 
     pre_encoder = PreEncoder(model_repository, model_save_path)
 
     vocab_resolver = VocabResolver(model_repository)
-    vocab_resolver.load_vocab(test_vocab_path)
+    vocab_resolver.load_vocab(vocab_path)
 
     total_token_emb_offset = 0
     offsets = [0]
 
+    output_dir = args.output_dir
+
+    # Create the output directory if it doesn't exist
+    os.makedirs(output_dir, exist_ok=True)
+
     token_np_emb_file = NpyAppendArray(
-        os.path.join(DATA_DIR, "test", "token_embeddings.npy"),
+        os.path.join(output_dir, "token_embeddings.npy"),
         delete_if_exists=True
     )
     text_np_emb_file = NpyAppendArray(
-        os.path.join(DATA_DIR, "test", "text_embeddings.npy"),
+        os.path.join(output_dir, "text_embeddings.npy"),
         delete_if_exists=True
     )
     tokens_np_file = NpyAppendArray(
-        os.path.join(DATA_DIR, "test", "tokens.npy"),
+        os.path.join(output_dir, "tokens.npy"),
         delete_if_exists=True
     )
-    offsets_file = os.path.join(DATA_DIR, "test", "offsets.npy")
+    offsets_file = os.path.join(output_dir, "offsets.npy")
 
-    for batch in iter_batch(read_texts(test_data_path), batch_size):
+    for batch in iter_batch(read_texts(args.input_file), batch_size):
         batch_output = pre_encoder.encode(batch)
 
         batch_offsets, flattened_vocab_ids, flattened_token_embeddings = vocab_resolver.filter(

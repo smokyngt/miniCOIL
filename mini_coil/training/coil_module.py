@@ -4,6 +4,7 @@ import lightning as L
 import numpy as np
 import torch
 from torch import optim
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from mini_coil.model.cosine_loss import CosineLoss
 from mini_coil.model.decoder import Decoder
@@ -24,11 +25,27 @@ class MiniCoil(L.LightningModule):
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=1e-3)
         return optimizer
+        # return {
+        #     "optimizer": optimizer,
+        #     "lr_scheduler": {
+        #         "scheduler": ReduceLROnPlateau(
+        #             optimizer,
+        #             mode='min',
+        #             factor=0.5,
+        #             patience=50,
+        #             verbose=True,
+        #             threshold=1e-5,
+        #         ),
+        #         "monitor": "val_loss",
+        #         # "frequency": "indicates how often the metric is updated",
+        #         # If "monitor" references validation metrics, then "frequency" should be set to a
+        #         # multiple of "trainer.check_val_every_n_epoch".
+        #     },
+        # }
 
-    def training_step(
+    def encode_decode_loss(
             self,
             batch: Dict[str, np.ndarray],
-            batch_idx: int
     ):
         """
         batch:
@@ -72,8 +89,27 @@ class MiniCoil(L.LightningModule):
             unique_flattened_encoded,
         )
 
-        loss = self.loss(word_to_text_id, decompressed, text_embeddings)
+        return self.loss(word_to_text_id, decompressed, text_embeddings)
 
-        self.log("loss", loss)
+    def training_step(
+            self,
+            batch: Dict[str, np.ndarray],
+            batch_idx: int
+    ):
+        loss = self.encode_decode_loss(batch)
+
+        self.log("train_loss", loss)
+
+        return loss
+
+    def validation_step(
+            self,
+            batch: Dict[str, np.ndarray],
+            batch_idx: int
+    ):
+        batch_size = batch['token_ids'].shape[0]
+
+        loss = self.encode_decode_loss(batch)
+        self.log("val_loss", loss, batch_size=batch_size)
 
         return loss

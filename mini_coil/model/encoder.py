@@ -28,7 +28,7 @@ class Encoder(nn.Module):
          ┌─────────────────────┐        │     │   │                        ┌─┴───────┐ │
          │                     │        │     │   │                        │         │ │
          └─────────────────────┘        │     │   │  ┌────────────┐      ┌─┴───────┐ │ │      ┌─────────┐
-                                        │     │   └─►│ Vector(128)├─────►│         │ │ ├─────►│Sigmoid  │
+                                        │     │   └─►│ Vector(128)├─────►│         │ │ ├─────►│Tanh     │
          ┌─────────────────────┐        │     │      └────────────┘      │         │ │ │      └─────────┘
          │                     │        │     │                          │         │ ├─┘
          └─────────────────────┘        │     │                          │         ├─┘
@@ -39,7 +39,7 @@ class Encoder(nn.Module):
 
          Final liner transformation is accompanied by a non-linear activation function: Sigmoid.
 
-         Sigmoid is used to ensure that the output is in the range [0, 1].
+         Tanh is used to ensure that the output is in the range [-1, 1].
          It would be easier to visually interpret the output of the model, assuming that each dimension
          would need to encode a type of semantic cluster.
     """
@@ -71,7 +71,7 @@ class Encoder(nn.Module):
         # For each word in the vocabulary, we have a linear encoder
         self.encoder_weights = nn.Parameter(torch.zeros((vocab_size, intermediate_dim, output_dim), **factory_kwargs))
 
-        self.activation = nn.Sigmoid()
+        self.activation = nn.Tanh()
 
         self.reset_parameters()
 

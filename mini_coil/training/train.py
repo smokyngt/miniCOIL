@@ -2,6 +2,7 @@ import os
 
 import lightning as L
 from ipdb import launch_ipdb_on_exception
+from lightning.pytorch.callbacks import ModelCheckpoint
 
 from mini_coil.data_pipeline.vocab_resolver import VocabResolver
 from mini_coil.model.decoder import Decoder
@@ -39,8 +40,13 @@ def main():
     batch_size = 64
     model_repository = "sentence-transformers/all-MiniLM-L6-v2"
 
-    path = os.path.join(DATA_DIR, "test")
-    train_loader = PreEncodedLoader(path, batch_size)
+    data_path = os.path.join(DATA_DIR, "test")
+
+    train_path = os.path.join(data_path, "train")
+    valid_path = os.path.join(data_path, "valid")
+
+    train_loader = PreEncodedLoader(train_path, batch_size)
+    valid_loader = PreEncodedLoader(valid_path, batch_size)
 
     test_vocab_path = os.path.join(DATA_DIR, "test", "vocab.txt")
 
@@ -49,13 +55,21 @@ def main():
 
     mini_coil = get_model(vocab_resolver.vocab_size())
 
-    trainer = L.Trainer(max_epochs=1000)
+    checkpoint_callback = ModelCheckpoint(
+        every_n_epochs=10,
+    )
+
+    trainer = L.Trainer(
+        max_epochs=1000,
+        callbacks=[checkpoint_callback],
+    )
 
     # catch with ipdb
     with launch_ipdb_on_exception():
         trainer.fit(
             model=mini_coil,
-            train_dataloaders=train_loader
+            train_dataloaders=train_loader,
+            val_dataloaders=valid_loader
         )
 
 
