@@ -1,3 +1,4 @@
+import argparse
 import os
 from typing import Iterable
 from sentence_splitter import SentenceSplitter, split_text_into_sentences
@@ -19,18 +20,19 @@ def sentence_splitter(abstract: Iterable[str]) -> Iterable[str]:
 
 
 def main():
-    path = os.path.join(DATA_DIR, "test")
-    input = os.path.join(path, "bat.txt")
-    output = os.path.join(path, "bat_sentences.txt")
 
-    abstracts = read_abstracts(input)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input-file", type=str)
+    parser.add_argument("--output-file", type=str)
+    args = parser.parse_args()
+
+    abstracts = read_abstracts(args.input_file)
 
     sentences = sentence_splitter(abstracts)
 
-    with open(output, "w") as f:
+    with open(args.output_file, "w") as f:
         for sentence in sentences:
-            if "bat" in sentence.lower():
-                f.write(sentence + "\n")
+            f.write(sentence + "\n")
 
 
 if __name__ == "__main__":

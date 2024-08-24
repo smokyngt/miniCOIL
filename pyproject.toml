@@ -21,6 +21,11 @@ npy-append-array = "^0.9.16"
 lightning = {extras = ["extra"], version = "^2.4.0"}
 sentence-splitter = "^1.4"
 sentence-transformers = "^3.0.1"
+qdrant-client = "^1.11.0"
+umap-learn = "^0.5.6"
+scipy = "^1.14.1"
+matplotlib = "^3.9.2"
+seaborn = "^0.13.2"
 
 
 [build-system]
