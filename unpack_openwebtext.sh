@@ -5,6 +5,10 @@
 
 ARCHIVE_DIR=data/openwebtext
 
+rm -rf $ARCHIVE_DIR/openwebtext_subset*
+
+rm -f $ARCHIVE_DIR/openwebtext
+
 for archive in $ARCHIVE_DIR/*.tar
 do
   # archive = data/openwebtext/urlsf_subset00.tar
