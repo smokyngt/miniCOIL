@@ -15,10 +15,11 @@ do
   file_name=$(basename $file)
   # file_name = openwebtext-00.txt.gz
 
-  # index = 00
-  index=${file_name: -6:2}
+  # Filename without extension
 
-  python -m mini_coil.data_pipeline.split_sentences --input-file $file --output-file $ARCHIVE_DIR/openwebtext-${index}-sentences.txt.gz &
+  file_name_no_ext=${file_name%.txt.gz}
+
+  python -m mini_coil.data_pipeline.split_sentences --input-file $file --output-file $ARCHIVE_DIR/${file_name_no_ext}-sentences.txt.gz &
 done
 
 
