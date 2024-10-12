@@ -21,14 +21,15 @@ import tarfile
 import glob
 import tqdm
 import gzip
+import argparse
 from typing import Iterable
 
 
 from mini_coil.settings import DATA_DIR
 
 
-def iterate_archives() -> Iterable[str]:
-    path_to_xz_archives = os.path.join(DATA_DIR, "openwebtext", "*.xz")
+def iterate_archives(archive_dir) -> Iterable[str]:
+    path_to_xz_archives = os.path.join(archive_dir, "*.xz")
     all_files = glob.glob(path_to_xz_archives)
     for archive in tqdm.tqdm(all_files):
         yield archive
@@ -40,17 +41,27 @@ def read_files_from_tar_xz(archive_path: str) -> Iterable[str]:
             yield tar.extractfile(member).read().decode("utf-8")
 
 
-def read_texts() -> Iterable[str]:
-    for archive in iterate_archives():
+def read_texts(archive_dir) -> Iterable[str]:
+    for archive in iterate_archives(archive_dir):
         for text in read_files_from_tar_xz(archive):
             yield text
 
 
 def main():
-    output_file = os.path.join(DATA_DIR, "openwebtext.txt.gz")
+    arg_parser = argparse.ArgumentParser()
+
+    arg_parser.add_argument("--output-file", type=str, default=None)
+    arg_parser.add_argument("--archive-dir", type=str, default=os.path.join(DATA_DIR, "openwebtext"))
+
+    args = arg_parser.parse_args()
+
+    output_file = args.output_file
+    archive_dir = args.archive_dir
+
+    # output_file = os.path.join(DATA_DIR, "openwebtext.txt.gz")
 
     with gzip.open(output_file, "wt") as f:
-        for text in tqdm.tqdm(read_texts()):
+        for text in tqdm.tqdm(read_texts(archive_dir)):
             f.write(text)
             f.write("\n")
 
