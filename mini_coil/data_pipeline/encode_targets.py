@@ -86,8 +86,11 @@ def main():
             parallel=parallel
     )):
         # Convert to float16 and reshape from (dim,) to (1, dim)
-        vector_fp16 = vector.astype(np.float16).reshape(1, -1)
-        text_np_emb_file.append(vector_fp16)
+        # vector_fp16 = vector.astype(np.float16).reshape(1, -1)
+
+        # Do not convert to float16, just reshape
+        vector_conv = vector.reshape(1, -1)
+        text_np_emb_file.append(vector_conv)
 
     text_np_emb_file.close()
 
