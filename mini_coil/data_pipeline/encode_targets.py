@@ -12,37 +12,26 @@ it will write directly to disk.
 
 """
 
+import argparse
+import gzip
+import itertools
 import os
 from typing import Iterable
-import argparse
 
 import numpy as np
 import tqdm
+from fastembed import TextEmbedding
 from npy_append_array import NpyAppendArray
-from sentence_transformers import SentenceTransformer
 
-from mini_coil.data_pipeline.pre_encoder import PreEncoder
 from mini_coil.settings import DATA_DIR
-from mini_coil.data_pipeline.vocab_resolver import VocabResolver
 
 
 def read_texts(path: str) -> Iterable[str]:
-    with open(path, "r") as f:
-        for line in tqdm.tqdm(f):
+    with gzip.open(path, "rt") as f:
+        for line in f:
             line = line.strip()
-            if len(line) > 0:
-                yield line
-
-
-def iter_batch(iterable, size):
-    batch = []
-    for item in iterable:
-        batch.append(item)
-        if len(batch) >= size:
-            yield batch
-            batch = []
-    if len(batch) > 0:
-        yield batch
+            _abs_hash, sentence = line.split("\t")
+            yield sentence
 
 
 def main():
@@ -54,13 +43,30 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input-file", type=str, default=default_input_data_path)
     parser.add_argument("--output-file", type=str, default=default_output_file)
+    parser.add_argument("--model-name", type=str, default="mixedbread-ai/mxbai-embed-large-v1")
+    parser.add_argument("--use-cuda", action="store_true")
+    parser.add_argument("--device-count", type=int, default=None)
+    parser.add_argument("--max-count", type=int, default=None)
+    parser.add_argument("--batch-size", type=int, default=1024)
+
     args = parser.parse_args()
 
-    model_repository = "mixedbread-ai/mxbai-embed-large-v1"
+    model_name = args.model_name
 
-    model = SentenceTransformer(model_repository, trust_remote_code=True)
+    device_ids = [i for i in range(args.device_count)] if args.device_count else None
 
-    batch_size = 1024
+    lazy_load = True if device_ids is not None else False
+
+    model = TextEmbedding(
+        model_name=model_name,
+        cuda=args.use_cuda,
+        device_ids=device_ids,
+        lazy_load=lazy_load
+    )
+
+    parallel = len(device_ids) if device_ids else None
+
+    batch_size = args.batch_size
 
     output_file = args.output_file
     output_dir = os.path.basename(output_file)
@@ -69,9 +75,19 @@ def main():
 
     text_np_emb_file = NpyAppendArray(output_file, delete_if_exists=True)
 
-    for batch in iter_batch(read_texts(args.input_file), batch_size):
-        text_embeddings = model.encode(batch)
-        text_np_emb_file.append(text_embeddings)
+    text_iterator = read_texts(args.input_file)
+
+    if args.max_count:
+        text_iterator = itertools.islice(text_iterator, args.max_count)
+
+    for vector in tqdm.tqdm(model.embed(
+            text_iterator,
+            batch_size=batch_size,
+            parallel=parallel
+    )):
+        # Convert to float16 and reshape from (dim,) to (1, dim)
+        vector_fp16 = vector.astype(np.float16).reshape(1, -1)
+        text_np_emb_file.append(vector_fp16)
 
     text_np_emb_file.close()
 

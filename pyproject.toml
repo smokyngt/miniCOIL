@@ -6,7 +6,7 @@ authors = ["generall <andrey@vasnetsov.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.10,<3.13"
 pyarrow = "^17.0.0"
 pandas = "^2.2.2"
 ipdb = "^0.13.13"
@@ -26,6 +26,7 @@ umap-learn = "^0.5.6"
 scipy = "^1.14.1"
 matplotlib = "^3.9.2"
 seaborn = "^0.13.2"
+fastembed = {git = "https://github.com/qdrant/fastembed.git", rev = "multi-gpu-support"}
 
 
 [build-system]
