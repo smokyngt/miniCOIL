@@ -83,11 +83,11 @@ def main():
                 size=len(embeddings[0]),
                 distance=models.Distance.COSINE
             ),
-            hnsw_config=models.HnswConfig(
+            hnsw_config=models.HnswConfigDiff(
                 m=0,
                 max_indexing_threads=1,
             ),
-            optimizers_config=models.OptimizersConfig(
+            optimizers_config=models.OptimizersConfigDiff(
                 max_segment_size=2_000_000,
             ),
         )
