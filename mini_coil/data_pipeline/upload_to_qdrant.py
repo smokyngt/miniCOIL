@@ -90,6 +90,7 @@ def main():
             optimizers_config=models.OptimizersConfigDiff(
                 max_segment_size=2_000_000,
             ),
+            shard_number=6,
         )
 
         qdrant.create_payload_index(
@@ -103,7 +104,10 @@ def main():
             )
         )
 
-    qdrant.upload_points(collection_name, tqdm.tqdm(data_iter()))
+    qdrant.upload_points(
+        collection_name,
+        tqdm.tqdm(data_iter())
+    )
 
 
 if __name__ == "__main__":
