@@ -82,7 +82,9 @@ def main():
             collection_name,
             vectors_config=models.VectorParams(
                 size=len(embeddings[0]),
-                distance=models.Distance.COSINE
+                distance=models.Distance.COSINE,
+                datatype=models.Datatype.FLOAT16,
+                on_disk=True,
             ),
             hnsw_config=models.HnswConfigDiff(
                 m=0,
@@ -108,7 +110,7 @@ def main():
     qdrant.upload_points(
         collection_name,
         points=tqdm.tqdm(data_iter()),
-        parallel = args.parallel,
+        parallel=args.parallel,
     )
 
 
