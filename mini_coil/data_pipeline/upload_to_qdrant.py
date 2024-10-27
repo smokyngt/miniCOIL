@@ -5,6 +5,7 @@ from typing import Iterable
 from qdrant_client import QdrantClient, models
 import numpy as np
 import hashlib
+import tqdm
 
 QDRANT_URL = os.environ.get("QDRANT_URL", "http://localhost:6333")
 QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", "")
@@ -102,7 +103,7 @@ def main():
             )
         )
 
-    qdrant.upload_points(collection_name, data_iter())
+    qdrant.upload_points(collection_name, tqdm.tqdm(data_iter()))
 
 
 if __name__ == "__main__":
