@@ -4,7 +4,6 @@ from typing import Iterable
 
 from qdrant_client import QdrantClient, models
 import numpy as np
-import tqdm
 import hashlib
 
 QDRANT_URL = os.environ.get("QDRANT_URL", "http://localhost:6333")
@@ -56,7 +55,7 @@ def main():
 
     def data_iter():
         texts_iter = read_texts(args.input_text)
-        for ((abs_hash, sentence), label), emb in zip(texts_iter, embeddings):
+        for (abs_hash, sentence), emb in zip(texts_iter, embeddings):
             # Compute hash from the text and convert it to UUID
             hash_uuid = hashlib.md5(sentence.encode()).hexdigest()
 
