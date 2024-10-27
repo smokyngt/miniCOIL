@@ -45,6 +45,7 @@ def main():
     parser.add_argument("--input-text", type=str)
     parser.add_argument("--collection-name", type=str, default="coil")
     parser.add_argument("--recreate-collection", action="store_true")
+    parser.add_argument("--parallel", type=int, default=1)
     args = parser.parse_args()
 
     collection_name = args.collection_name
@@ -106,7 +107,8 @@ def main():
 
     qdrant.upload_points(
         collection_name,
-        tqdm.tqdm(data_iter())
+        points=tqdm.tqdm(data_iter()),
+        parallel = args.parallel,
     )
 
 
