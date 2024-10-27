@@ -67,7 +67,7 @@ def main():
             )
 
     qdrant = QdrantClient(
-        qdrant_url=QDRANT_URL,
+        url=QDRANT_URL,
         api_key=QDRANT_API_KEY,
         prefer_grpc=True,
     )
