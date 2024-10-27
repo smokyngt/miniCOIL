@@ -9,6 +9,9 @@ from mini_coil.settings import DATA_DIR
 
 DEFAULT_SAMPLE_SIZE = 2000
 
+QDRANT_HOST = os.environ.get("QDRANT_URL", "http://localhost")
+QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", "default")
+
 
 def query_qdrant_matrix_api(
         collection_name: str,
@@ -17,13 +20,16 @@ def query_qdrant_matrix_api(
         word: str = None,
 ):
     response = requests.post(
-        f"http://localhost:6333/collections/{collection_name}/points/search/matrix/offsets",
+        f"{QDRANT_HOST}:6333/collections/{collection_name}/points/search/matrix/offsets",
+        headers={
+            "api-key": QDRANT_API_KEY,
+        },
         json={
             "sample": sample_size,
             "limit": limit,
             "filter": {
                 "must": {
-                    "key": "text",
+                    "key": "sentence",
                     "match": {
                         "text": word
                     }
@@ -31,6 +37,10 @@ def query_qdrant_matrix_api(
             }
         }
     )
+
+    if not response.ok:
+        print(response.text)
+        raise Exception(response)
 
     data = response.json()
 
@@ -100,13 +110,18 @@ def plot_embeddings(embeddings, save_path: str):
 def main():
     collection_name = "coil"
 
-    word = "bat"
+    word = "vector"
 
     result = query_qdrant_matrix_api(collection_name, word=word)
     offsets_row = np.array(result["offsets_row"])
     offsets_col = np.array(result["offsets_col"])
     scores = np.array(result["scores"])
     ids = np.array(result["ids"])
+
+    # print(f"Number of points: {len(ids)}")
+    # print(f"Number of non-zero elements: {len(scores)}")
+    # print(f"Number of rows: {len(offsets_row)}")
+    # print(f"Number of cols: {len(offsets_col)}")
 
     matrix = csr_matrix((scores, (offsets_row, offsets_col)))
 
