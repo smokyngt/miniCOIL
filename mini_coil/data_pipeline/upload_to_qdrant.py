@@ -46,6 +46,7 @@ def main():
     parser.add_argument("--collection-name", type=str, default="coil")
     parser.add_argument("--recreate-collection", action="store_true")
     parser.add_argument("--parallel", type=int, default=1)
+    parser.add_argument("--skip-first", type=int, default=0)
     args = parser.parse_args()
 
     collection_name = args.collection_name
@@ -56,8 +57,12 @@ def main():
         embeddings = np.load(args.input_emb, mmap_mode='r')
 
     def data_iter():
+        skipped = 0
         texts_iter = read_texts(args.input_text)
         for (abs_hash, sentence), emb in zip(texts_iter, embeddings):
+            if skipped < args.skip_first:
+                skipped += 1
+                continue
             # Compute hash from the text and convert it to UUID
             hash_uuid = hashlib.md5((sentence + abs_hash).encode()).hexdigest()
 
