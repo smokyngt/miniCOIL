@@ -59,7 +59,7 @@ def main():
         texts_iter = read_texts(args.input_text)
         for (abs_hash, sentence), emb in zip(texts_iter, embeddings):
             # Compute hash from the text and convert it to UUID
-            hash_uuid = hashlib.md5(sentence.encode()).hexdigest()
+            hash_uuid = hashlib.md5((sentence + abs_hash).encode()).hexdigest()
 
             yield models.PointStruct(
                 id=hash_uuid,
