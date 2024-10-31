@@ -97,6 +97,7 @@ def main():
             ),
             optimizers_config=models.OptimizersConfigDiff(
                 max_segment_size=2_000_000,
+                max_optimization_threads=1,  # Run one optimization per shard
             ),
             shard_number=6,
         )
