@@ -27,6 +27,7 @@ scipy = "^1.14.1"
 matplotlib = "^3.9.2"
 seaborn = "^0.13.2"
 fastembed = "^0.4.1"
+nltk = "^3.9.1"
 
 
 [build-system]
