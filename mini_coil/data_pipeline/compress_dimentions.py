@@ -36,7 +36,7 @@ def query_qdrant_matrix_api(
                 )
             ]
         ),
-        timeout=10
+        timeout=60,
     )
 
     elapsed = time.time() - time_start
