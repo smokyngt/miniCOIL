@@ -100,7 +100,7 @@ def plot_embeddings(embeddings, save_path: str):
     plt.close()
 
 
-def get_matrix(collection_name: str, word: str, sample_size: int = DEFAULT_SAMPLE_SIZE):
+def get_matrix(collection_name: str, word: str, output_dir, sample_size: int = DEFAULT_SAMPLE_SIZE):
     retry = 0
 
     while retry < 3:
@@ -114,6 +114,10 @@ def get_matrix(collection_name: str, word: str, sample_size: int = DEFAULT_SAMPL
 
             # make sure that the matrix is symmetric
             matrix = matrix + matrix.T
+
+            sparse_matrix_path = os.path.join(output_dir, f"sparse_matrix_{word}.json")
+            with open(sparse_matrix_path, "w") as f:
+                f.write(result.model_dump_json())
 
             return matrix
         except Exception as e:
@@ -136,7 +140,7 @@ def main():
 
     word = args.word
 
-    matrix = get_matrix(collection_name, word, sample_size=args.sample_size)
+    matrix = get_matrix(collection_name, word, sample_size=args.sample_size, output_dir=args.output_dir)
 
     compressed_vectors = compress_matrix(matrix, dim=args.dim)
 
@@ -150,10 +154,6 @@ def main():
 
     path = os.path.join(output_dir, f"compressed_matrix_{word}.npy")
     np.save(path, compressed_vectors)
-
-    sparse_matrix_path = os.path.join(output_dir, f"sparse_matrix_{word}.json")
-    with open(sparse_matrix_path, "w") as f:
-        f.write(result.model_dump_json())
 
     if args.plot:
         compressed_vectors_2d = compressed_vectors[:, :2]
