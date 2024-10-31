@@ -22,7 +22,7 @@ def query_qdrant_matrix_api(
 ) -> models.SearchMatrixOffsetsResponse:
     time_start = time.time()
 
-    qdrant = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY, port=80)
+    qdrant = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY, port=80, timeout=1000)
 
     response = qdrant.search_matrix_offsets(
         collection_name=collection_name,
@@ -36,7 +36,7 @@ def query_qdrant_matrix_api(
                 )
             ]
         ),
-        timeout=60,
+        timeout=1000,
     )
 
     elapsed = time.time() - time_start
