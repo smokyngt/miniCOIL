@@ -100,6 +100,28 @@ def plot_embeddings(embeddings, save_path: str):
     plt.close()
 
 
+def get_matrix(collection_name: str, word: str, sample_size: int = DEFAULT_SAMPLE_SIZE):
+    retry = 0
+
+    while retry < 3:
+        try:
+            result = query_qdrant_matrix_api(collection_name, word=word, sample_size=sample_size)
+            offsets_row = np.array(result.offsets_row)
+            offsets_col = np.array(result.offsets_col)
+            scores = np.array(result.scores)
+
+            matrix = csr_matrix((scores, (offsets_row, offsets_col)))
+
+            # make sure that the matrix is symmetric
+            matrix = matrix + matrix.T
+
+            return matrix
+        except Exception as e:
+            print(f"Error: {e}")
+            retry += 1
+            continue
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--word", type=str)
@@ -114,15 +136,7 @@ def main():
 
     word = args.word
 
-    result = query_qdrant_matrix_api(collection_name, word=word, sample_size=args.sample_size)
-    offsets_row = np.array(result.offsets_row)
-    offsets_col = np.array(result.offsets_col)
-    scores = np.array(result.scores)
-
-    matrix = csr_matrix((scores, (offsets_row, offsets_col)))
-
-    # make sure that the matrix is symmetric
-    matrix = matrix + matrix.T
+    matrix = get_matrix(collection_name, word, sample_size=args.sample_size)
 
     compressed_vectors = compress_matrix(matrix, dim=args.dim)
 
