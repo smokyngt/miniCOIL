@@ -40,85 +40,57 @@ def load_matrix_ids(directory: str, word: str):
         return ids
 
 
-def get_all_id_to_abstract(collection_name: str, limit=1000) -> Dict[str, str]:
-    id_to_abstract = {}
-    progress_bar = tqdm.tqdm()
-
-    points, offset = client.scroll(
-        collection_name,
-        with_payload=["abs_hash"],
-        with_vectors=False,
-        limit=limit
-    )
-
-    for point in points:
-        id_to_abstract[point.id] = point.payload['abs_hash']
-
-    progress_bar.update(len(points))
-
-    while offset is not None:
-        points_batch, offset = client.scroll(
-            collection_name,
-            with_payload=["abs_hash"],
-            with_vectors=False,
-            offset=offset,
-            limit=limit
-        )
-
-        progress_bar.update(len(points_batch))
-
-        for point in points_batch:
-            id_to_abstract[point.id] = point.payload['abs_hash']
-
-    return id_to_abstract
-
-
-def load_abstract_ids(collection_name: str, ids: List[str]) -> Dict[str, str]:
+def load_sentences(collection_name: str, ids: List[str]) -> List[dict]:
     points = client.retrieve(
         collection_name,
         ids,
-        with_payload=["abs_hash"],
+        with_payload=True,
         with_vectors=False
     )
 
     points_to_abstracts = dict(
-        (point.id, point.payload['abs_hash'])
+        (point.id, point.payload)
         for point in points
     )
 
-    return points_to_abstracts
+    result = []
+    for point_id in ids:
+        if point_id not in points_to_abstracts:
+            print(f"Point {point_id} not found in collection {collection_name}")
+            exit(1)
+
+        result.append({
+            "id": point_id,
+            **points_to_abstracts[point_id]
+        })
+
+    return result
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--vocab-path", type=str)
     parser.add_argument("--abstracts-collection-name", type=str, default="coil-abstracts")
     parser.add_argument("--sentences-collection-name", type=str, default="coil")
+    parser.add_argument("--word", type=str)
     parser.add_argument("--matrix-dir", type=str)
     parser.add_argument("--output-path", type=str)
     args = parser.parse_args()
 
-    vocabulary = load_vocabulary(args.vocab_path)
-
-    abstracts_to_words = defaultdict(list)
-
     sentences_collection_name = args.sentences_collection_name
     abstracts_collection_name = args.abstracts_collection_name
 
-    ids_to_abstract = get_all_id_to_abstract(sentences_collection_name)
+    word = args.word
 
-    for word in tqdm.tqdm(vocabulary):
-        ids = load_matrix_ids(args.matrix_dir, word)
-        if ids is None:
-            print(f"Matrix for word {word} does not exist")
-            continue
-        for idx in ids:
-            abstract_hash = ids_to_abstract.get(idx)
-            if abstract_hash is not None:
-                abstracts_to_words[abstract_hash].append(word)
+    ids = load_matrix_ids(args.matrix_dir, word)
+    if ids is None:
+        print(f"Matrix for word {word} does not exist")
+        return
+
+    sentences_data = load_sentences(sentences_collection_name, ids)
 
     with open(args.output_path, 'w') as f:
-        json.dump(abstracts_to_words, f, indent=2)
+        for sentence in sentences_data:
+            f.write(json.dumps(sentence) + '\n')
 
 
 if __name__ == "__main__":
