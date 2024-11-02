@@ -2,13 +2,20 @@ from typing import Iterable, Tuple, List
 
 import numpy as np
 import torch
+from tokenizers import Tokenizer
 from transformers import AutoTokenizer
 
 
 class VocabResolver:
-    def __init__(self, model_repository="sentence-transformers/all-MiniLM-L6-v2"):
+    def __init__(self, model_repository: str = None, tokenizer: Tokenizer = None):
         self.vocab = {}
-        self.tokenizer = AutoTokenizer.from_pretrained(model_repository)
+        self.auto_tokenizer = AutoTokenizer.from_pretrained(model_repository) if model_repository is not None else None
+        self.tokenizer = tokenizer
+
+    def convert_ids_to_tokens(self, token_ids: np.ndarray) -> list:
+        if self.tokenizer is not None:
+            return [self.tokenizer.id_to_token(token_id) for token_id in token_ids]
+        return self.auto_tokenizer.convert_ids_to_tokens(token_ids)
 
     def vocab_size(self):
         return len(self.vocab) + 1
@@ -66,7 +73,7 @@ class VocabResolver:
 
         """
 
-        tokens = self.tokenizer.convert_ids_to_tokens(token_ids)
+        tokens = self.convert_ids_to_tokens(token_ids)
         tokens_mapping = self._reconstruct_bpe(enumerate(tokens))
 
         for token, mapped_token_ids in tokens_mapping:

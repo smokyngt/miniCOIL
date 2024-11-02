@@ -1,10 +1,10 @@
+import os
 import time
 from typing import List
 
 import numpy as np
 from transformers import AutoModel, AutoTokenizer
 import torch
-import os
 import onnxruntime as ort
 
 from mini_coil.settings import DATA_DIR
@@ -24,7 +24,7 @@ def cosine_similarity(rows_a: np.ndarray, rows_b: np.ndarray):
 
 def download_and_save_onnx(model_repository, model_save_path):
     # Load model and tokenizer
-    model = AutoModel.from_pretrained(model_repository)
+    model = AutoModel.from_pretrained(model_repository, trust_remote_code=True)
     tokenizer = AutoTokenizer.from_pretrained(model_repository)
 
     texts = [
@@ -153,15 +153,13 @@ def check_similarity():
 
 
 if __name__ == "__main__":
-    check_similarity()
-
-    exit(0)
-
-
+    # check_similarity()
+    #
+    # exit(0)
 
     # Specify the Hugging Face repository and the local path for saving the ONNX model
-    model_repository = "sentence-transformers/all-MiniLM-L6-v2"
-    model_save_path = os.path.join(DATA_DIR, "all_miniLM_L6_v2.onnx")
+    model_repository = "jinaai/jina-embeddings-v2-base-en"
+    model_save_path = os.path.join(DATA_DIR, "jina-embeddings-v2-base-en.onnx")
 
     download_and_save_onnx(model_repository, model_save_path)
 
