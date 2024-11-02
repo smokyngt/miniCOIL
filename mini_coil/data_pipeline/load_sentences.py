@@ -73,7 +73,7 @@ def main():
     parser.add_argument("--sentences-collection-name", type=str, default="coil")
     parser.add_argument("--word", type=str)
     parser.add_argument("--matrix-dir", type=str)
-    parser.add_argument("--output-path", type=str)
+    parser.add_argument("--output-dir", type=str)
     args = parser.parse_args()
 
     sentences_collection_name = args.sentences_collection_name
@@ -88,7 +88,13 @@ def main():
 
     sentences_data = load_sentences(sentences_collection_name, ids)
 
-    with open(args.output_path, 'w') as f:
+    output_dir = args.output_dir
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir, exist_ok=True)
+
+    output_path = os.path.join(output_dir, f"sentences-{word}.jsonl")
+
+    with open(output_path, 'w') as f:
         for sentence in sentences_data:
             f.write(json.dumps(sentence) + '\n')
 
