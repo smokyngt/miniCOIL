@@ -30,6 +30,9 @@ def load_vocabulary(path: str) -> List[str]:
 
 def load_matrix_ids(directory: str, word: str):
     path = os.path.join(directory, f"sparse_matrix_{word}.json")
+    if not os.path.exists(path):
+        return None
+
     with open(path, 'r') as f:
         matrix = json.load(f)
         ids = matrix['ids']
@@ -67,6 +70,9 @@ def main():
 
     for word in tqdm.tqdm(vocabulary):
         ids = load_matrix_ids(args.matrix_dir, word)
+        if ids is None:
+            print(f"Matrix for word {word} does not exist")
+            continue
         point_to_abstract = load_abstract_ids(args.abstracts_collection_name, ids)
         for _point_id, abstract_hash in point_to_abstract.items():
             abstracts_to_words[abstract_hash].append(word)
