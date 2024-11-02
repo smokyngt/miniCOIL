@@ -68,12 +68,15 @@ def main():
 
     abstracts_to_words = defaultdict(list)
 
+    sentences_collection_name = args.sentences_collection_name
+    abstracts_collection_name = args.abstracts_collection
+
     for word in tqdm.tqdm(vocabulary):
         ids = load_matrix_ids(args.matrix_dir, word)
         if ids is None:
             print(f"Matrix for word {word} does not exist")
             continue
-        point_to_abstract = load_abstract_ids(args.abstracts_collection_name, ids)
+        point_to_abstract = load_abstract_ids(sentences_collection_name, ids)
         for _point_id, abstract_hash in point_to_abstract.items():
             abstracts_to_words[abstract_hash].append(word)
 

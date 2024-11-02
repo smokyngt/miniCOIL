@@ -134,25 +134,31 @@ def main():
     parser.add_argument("--output-dir", type=str, default=None)
     parser.add_argument("--plot", action="store_true")
     parser.add_argument("--sample-size", type=int, default=DEFAULT_SAMPLE_SIZE)
+    parser.add_argument("--overwrite", action="store_true")
     args = parser.parse_args()
 
     collection_name = args.collection_name
 
     word = args.word
 
-    matrix = get_matrix(collection_name, word, sample_size=args.sample_size, output_dir=args.output_dir)
-
-    compressed_vectors = compress_matrix(matrix, dim=args.dim)
-
     if args.output_dir is None:
         output_dir = os.path.join(DATA_DIR, "test")
     else:
         output_dir = args.output_dir
 
+    path = os.path.join(output_dir, f"compressed_matrix_{word}.npy")
+
+    if os.path.exists(path) and not args.overwrite:
+        print(f"File {path} already exists. Skipping")
+        return
+
+    matrix = get_matrix(collection_name, word, sample_size=args.sample_size, output_dir=args.output_dir)
+
+    compressed_vectors = compress_matrix(matrix, dim=args.dim)
+
     if not os.path.exists(output_dir):
         os.makedirs(output_dir, exist_ok=True)
 
-    path = os.path.join(output_dir, f"compressed_matrix_{word}.npy")
     np.save(path, compressed_vectors)
 
     if args.plot:
