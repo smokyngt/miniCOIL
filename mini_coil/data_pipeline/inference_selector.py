@@ -39,6 +39,39 @@ def load_matrix_ids(directory: str, word: str):
         return ids
 
 
+def get_all_id_to_abstract(collection_name: str, limit=1000) -> Dict[str, str]:
+    id_to_abstract = {}
+    progress_bar = tqdm.tqdm()
+
+    points, offset = client.scroll(
+        collection_name,
+        with_payload=["abs_hash"],
+        with_vectors=False,
+        limit=limit
+    )
+
+    for point in points:
+        id_to_abstract[point.id] = point.payload['abs_hash']
+
+    progress_bar.update(len(points))
+
+    while offset is not None:
+        points_batch, offset = client.scroll(
+            collection_name,
+            with_payload=["abs_hash"],
+            with_vectors=False,
+            offset=offset,
+            limit=limit
+        )
+
+        progress_bar.update(len(points_batch))
+
+        for point in points_batch:
+            id_to_abstract[point.id] = point.payload['abs_hash']
+
+    return id_to_abstract
+
+
 def load_abstract_ids(collection_name: str, ids: List[str]) -> Dict[str, str]:
     points = client.retrieve(
         collection_name,
@@ -71,14 +104,17 @@ def main():
     sentences_collection_name = args.sentences_collection_name
     abstracts_collection_name = args.abstracts_collection_name
 
+    ids_to_abstract = get_all_id_to_abstract(sentences_collection_name)
+
     for word in tqdm.tqdm(vocabulary):
         ids = load_matrix_ids(args.matrix_dir, word)
         if ids is None:
             print(f"Matrix for word {word} does not exist")
             continue
-        point_to_abstract = load_abstract_ids(sentences_collection_name, ids)
-        for _point_id, abstract_hash in point_to_abstract.items():
-            abstracts_to_words[abstract_hash].append(word)
+        for idx in ids:
+            abstract_hash = ids_to_abstract.get(idx)
+            if abstract_hash is not None:
+                abstracts_to_words[abstract_hash].append(word)
 
     with open(args.output_path, 'w') as f:
         json.dump(abstracts_to_words, f, indent=2)
