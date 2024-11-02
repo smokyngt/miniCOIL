@@ -69,7 +69,7 @@ def main():
     abstracts_to_words = defaultdict(list)
 
     sentences_collection_name = args.sentences_collection_name
-    abstracts_collection_name = args.abstracts_collection
+    abstracts_collection_name = args.abstracts_collection_name
 
     for word in tqdm.tqdm(vocabulary):
         ids = load_matrix_ids(args.matrix_dir, word)
