@@ -13,6 +13,7 @@ QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", "")
 client = QdrantClient(
     url=QDRANT_URL,
     api_key=QDRANT_API_KEY,
+    prefer_grpc=True,
 )
 
 
