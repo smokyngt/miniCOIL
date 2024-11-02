@@ -27,7 +27,7 @@ def compute_hash(text: str) -> str:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input-file", type=str)
-    parser.add_argument("--collection-name", type=str, default="coil")
+    parser.add_argument("--collection-name", type=str, default="coil-abstracts")
     parser.add_argument("--recreate-collection", action="store_true")
     parser.add_argument("--parallel", type=int, default=1)
     args = parser.parse_args()
