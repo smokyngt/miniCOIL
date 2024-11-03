@@ -18,24 +18,24 @@ class Encoder(nn.Module):
 
         Will look like this:
 
-                                       Shared
-                                       Linear                             Per-word
-                                       Layer (768 -> 128) + Tanh          Encoder Matrix
-         ┌─────────────────────┐        ┌─────┐
-         │ Token Embedding(768)├───────►│     ├───┐                       (10k, 128, 4)
-         └─────────────────────┘        │     │   │                          ┌─────────┐
-                                        │     │   │                          │         │
-         ┌─────────────────────┐        │     │   │                        ┌─┴───────┐ │
-         │                     │        │     │   │                        │         │ │
-         └─────────────────────┘        │     │   │  ┌────────────┐      ┌─┴───────┐ │ │      ┌─────────┐
-                                        │     │   └─►│ Vector(128)├─────►│         │ │ ├─────►│Tanh     │
-         ┌─────────────────────┐        │     │      └────────────┘      │         │ │ │      └─────────┘
-         │                     │        │     │                          │         │ ├─┘
-         └─────────────────────┘        │     │                          │         ├─┘
-                                        │     │                          │         │
-         ┌─────────────────────┐        │     │                          └─────────┘
-         │                     │        │     │
-         └─────────────────────┘        └─────┘
+
+                                             Per-word
+                                             Encoder Matrix
+         ┌─────────────────────┐
+         │ Token Embedding(768)├──────┐      (10k, 128, 4)
+         └─────────────────────┘      │         ┌─────────┐
+                                      │         │         │
+         ┌─────────────────────┐      │       ┌─┴───────┐ │
+         │                     │      │       │         │ │
+         └─────────────────────┘      │     ┌─┴───────┐ │ │      ┌─────────┐
+                                      └────►│         │ │ ├─────►│Tanh     │
+         ┌─────────────────────┐            │         │ │ │      └─────────┘
+         │                     │            │         │ ├─┘
+         └─────────────────────┘            │         ├─┘
+                                            │         │
+         ┌─────────────────────┐            └─────────┘
+         │                     │
+         └─────────────────────┘
 
          Final liner transformation is accompanied by a non-linear activation function: Sigmoid.
 
@@ -47,7 +47,7 @@ class Encoder(nn.Module):
     def __init__(
             self,
             input_dim: int,
-            intermediate_dim: int,
+            # intermediate_dim: int,
             output_dim: int,
             vocab_size: int,
             device=None,
@@ -56,20 +56,21 @@ class Encoder(nn.Module):
         factory_kwargs = {'device': device, 'dtype': dtype}
         super().__init__()
         self.input_dim = input_dim
-        self.intermediate_dim = intermediate_dim
+        # self.intermediate_dim = intermediate_dim
         self.output_dim = output_dim
         self.vocab_size = vocab_size
 
+        # DISABLED
         # Before training embeddings for individual words, we lower dimensionality of the original embeddings
         # using universal linear layer, shared across all words
 
-        self.intermediate_layer = nn.Sequential(
-            nn.Linear(input_dim, intermediate_dim, **factory_kwargs),
-            nn.Tanh(),
-        )
+        # self.intermediate_layer = nn.Sequential(
+        #     nn.Linear(input_dim, intermediate_dim, **factory_kwargs),
+        #     nn.Tanh(),
+        # )
 
         # For each word in the vocabulary, we have a linear encoder
-        self.encoder_weights = nn.Parameter(torch.zeros((vocab_size, intermediate_dim, output_dim), **factory_kwargs))
+        self.encoder_weights = nn.Parameter(torch.zeros((vocab_size, input_dim, output_dim), **factory_kwargs))
 
         self.activation = nn.Tanh()
 
@@ -235,8 +236,9 @@ class Encoder(nn.Module):
 
         # Generate intermediate embeddings
 
+        # DISABLED
         # (total_unique_vocab_ids, intermediate_dim)
-        unique_flattened_embeddings = self.intermediate_layer(unique_flattened_embeddings)
+        # unique_flattened_embeddings = self.intermediate_layer(unique_flattened_embeddings)
 
         # Select which linear encoders to use for each embedding
 
