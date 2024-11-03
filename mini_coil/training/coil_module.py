@@ -4,7 +4,6 @@ import lightning as L
 import numpy as np
 import torch
 from torch import optim
-from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from mini_coil.model.cosine_loss import CosineLoss
 from mini_coil.model.decoder import Decoder

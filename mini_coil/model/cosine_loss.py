@@ -26,6 +26,16 @@ class CosineLoss(nn.Module):
         # (flatten_batch)
         target_norm = torch.norm(mapped_target, dim=1)
 
+        # If prediction_norm or target_norm is zero, exclude them from the calculation
+        mask1 = prediction_norm < 1e-6
+        mask2 = target_norm < 1e-6
+        mask = mask1 + mask2
+
+        prediction = prediction[~mask]
+        mapped_target = mapped_target[~mask]
+        prediction_norm = prediction_norm[~mask]
+        target_norm = target_norm[~mask]
+
         # Pairwise cosine similarity
         # (flatten_batch)
         cosine_similarity = torch.einsum('bi,bi->b', prediction, mapped_target) / (prediction_norm * target_norm)

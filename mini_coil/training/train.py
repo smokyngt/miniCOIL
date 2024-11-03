@@ -15,7 +15,6 @@ from mini_coil.training.data_loader import PreEncodedLoader
 def get_encoder(vocab_size):
     return Encoder(
         input_dim=384,
-        intermediate_dim=128,
         output_dim=4,
         vocab_size=vocab_size,
     )
