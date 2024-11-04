@@ -40,7 +40,6 @@ class WordModule(L.LightningModule):
             },
         }
 
-
     def encode_decode_loss(
             self,
             batch: Dict[str, np.ndarray],
@@ -55,8 +54,8 @@ class WordModule(L.LightningModule):
 
         # import ipdb; ipdb.set_trace()
 
-        word_embeddings = torch.from_numpy(batch['word_embeddings']).to(self.device).float()
-        target_embeddings = torch.from_numpy(batch['target_embeddings']).to(self.device).float()
+        word_embeddings = batch['word_embeddings']
+        target_embeddings = batch['target_embeddings']
 
         # (batch_size, compressed_dim)
         encoded = self.encoder(
@@ -65,7 +64,7 @@ class WordModule(L.LightningModule):
 
         # one-to-one mapping of the encoded to the target embeddings
         # (batch_size)
-        mapping = torch.arange(encoded.size(0), device=encoded.device)
+        mapping = None  # torch.arange(encoded.size(0), device=encoded.device)
 
         loss = self.loss(mapping, encoded, target_embeddings)
 

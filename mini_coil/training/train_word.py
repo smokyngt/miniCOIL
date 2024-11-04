@@ -4,6 +4,7 @@ import numpy as np
 import lightning as L
 import torch
 from ipdb import launch_ipdb_on_exception
+from lightning.pytorch.loggers import CSVLogger
 
 from mini_coil.model.word_encoder import WordEncoder
 from mini_coil.training.word_module import WordModule
@@ -18,13 +19,26 @@ def get_encoder(input_dim, output_dim):
 
 class DataLoader:
 
-    def __init__(self, embeddings: np.ndarray, targets: np.ndarray, batch_size: int = 200):
+    def __init__(
+            self,
+            embeddings: np.ndarray,
+            targets: np.ndarray,
+            batch_size: int = 200,
+            use_cuda: bool = True,
+    ):
+        if use_cuda:
+            embeddings = torch.from_numpy(embeddings).float().cuda()
+            targets = torch.from_numpy(targets).float().cuda()
+        else:
+            embeddings = torch.from_numpy(embeddings).float()
+            targets = torch.from_numpy(targets).float()
         self.embeddings = embeddings
         self.targets = targets
         self.batch_size = batch_size
 
     def __iter__(self):
         total_batches = self.embeddings.shape[0] // self.batch_size
+
         for i in range(total_batches):
             from_idx = i * self.batch_size
             to_idx = (i + 1) * self.batch_size
@@ -53,7 +67,8 @@ def main():
     parser.add_argument("--embedding-path", type=str)
     parser.add_argument("--target-path", type=str)
     parser.add_argument('--output-path', type=str)
-    parser.add_argument('--gpu', type=int, default=-1)
+    parser.add_argument('--log-dir', type=str)
+    parser.add_argument('--gpu', action='store_true')
     args = parser.parse_args()
 
     embedding = np.load(args.embedding_path)
@@ -71,12 +86,21 @@ def main():
 
     encoder_prepared = torch.ao.quantization.prepare_qat(encoder.train())
 
+    if args.gpu:
+        accelerator = 'auto'
+    else:
+        accelerator = 'cpu'
+        torch.set_num_threads(1)
+
     trainer = L.Trainer(
         max_epochs=500,
+        enable_checkpointing=False,
+        logger=CSVLogger(args.log_dir),
+        accelerator=accelerator,
     )
 
-    train_loader = DataLoader(train_embeddings, train_target)
-    valid_loader = DataLoader(val_embeddings, val_target)
+    train_loader = DataLoader(train_embeddings, train_target, use_cuda=args.gpu)
+    valid_loader = DataLoader(val_embeddings, val_target, use_cuda=args.gpu)
 
     with launch_ipdb_on_exception():
         trainer.fit(

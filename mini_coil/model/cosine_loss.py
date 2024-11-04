@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 
 from torch import nn
@@ -12,12 +14,15 @@ class CosineLoss(nn.Module):
     @classmethod
     def cosine_distance(
             cls,
-            mapping: torch.LongTensor,
+            mapping: Optional[torch.LongTensor],
             prediction: torch.Tensor,
             target: torch.Tensor
     ) -> torch.Tensor:
         # (flatten_batch, output_dim)
-        mapped_target = target[mapping]
+        if mapping is None:
+            mapped_target = target
+        else:
+            mapped_target = target[mapping]
 
         # Cosine similarity
         # (flatten_batch)
@@ -48,7 +53,7 @@ class CosineLoss(nn.Module):
 
     def forward(
             self,
-            mapping: torch.LongTensor,
+            mapping: Optional[torch.LongTensor],
             prediction: torch.Tensor,
             target: torch.Tensor
     ) -> torch.Tensor:
