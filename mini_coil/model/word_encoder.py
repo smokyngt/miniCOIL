@@ -51,6 +51,8 @@ class WordEncoder(nn.Module):
         self.device = device
         self.dtype = dtype
 
+        self.dropout = nn.Dropout(0.05)
+
         # self.quant = torch.quantization.QuantStub()
         # self.dequant = torch.quantization.DeQuantStub()
 
@@ -77,6 +79,7 @@ class WordEncoder(nn.Module):
             (batch_size, output_dim) - compressed representation of the input
         """
         # word_embeddings = self.quant(word_embeddings)
+        word_embeddings = self.dropout(word_embeddings)
         compressed = self.activation(word_embeddings @ self.encoder_weights)
         return compressed
         # return self.dequant(compressed)
