@@ -69,6 +69,7 @@ def main():
     parser.add_argument('--output-path', type=str)
     parser.add_argument('--log-dir', type=str)
     parser.add_argument('--gpu', action='store_true')
+    parser.add_argument("--epochs", type=int, default=500)
     args = parser.parse_args()
 
     embedding = np.load(args.embedding_path)
@@ -80,11 +81,13 @@ def main():
     input_dim = train_embeddings.shape[1]
     output_dim = train_target.shape[1]
 
-    encoder = get_encoder(input_dim, output_dim)
+    encoder_load = get_encoder(input_dim, output_dim)
 
-    encoder.qconfig = torch.ao.quantization.get_default_qat_qconfig('x86')
+    encoder_prepared = encoder_load
 
-    encoder_prepared = torch.ao.quantization.prepare_qat(encoder.train())
+    # ToDo:
+    # encoder_load.qconfig = torch.ao.quantization.get_default_qat_qconfig('x86')
+    # encoder_prepared = torch.ao.quantization.prepare_qat(encoder_load.train())
 
     if args.gpu:
         accelerator = 'auto'
@@ -93,7 +96,7 @@ def main():
         torch.set_num_threads(1)
 
     trainer = L.Trainer(
-        max_epochs=500,
+        max_epochs=args.epochs,
         enable_checkpointing=False,
         logger=CSVLogger(args.log_dir),
         accelerator=accelerator,
@@ -108,6 +111,15 @@ def main():
             train_dataloaders=train_loader,
             val_dataloaders=valid_loader
         )
+
+    torch.save(encoder_prepared.state_dict(), args.output_path)
+
+    # Try to read the saved model
+    encoder_load = get_encoder(input_dim, output_dim)
+
+    # encoder_load.qconfig = torch.ao.quantization.get_default_qat_qconfig('x86')
+    # encoder_prepared_load = torch.ao.quantization.prepare_qat(encoder_load)
+    encoder_load.load_state_dict(torch.load(args.output_path, weights_only=True))
 
 
 if __name__ == "__main__":

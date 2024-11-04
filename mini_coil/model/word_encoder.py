@@ -51,8 +51,8 @@ class WordEncoder(nn.Module):
         self.device = device
         self.dtype = dtype
 
-        self.quant = torch.quantization.QuantStub()
-        self.dequant = torch.quantization.DeQuantStub()
+        # self.quant = torch.quantization.QuantStub()
+        # self.dequant = torch.quantization.DeQuantStub()
 
         self.encoder_weights = nn.Parameter(torch.zeros((input_dim, output_dim), **factory_kwargs))
 
@@ -76,7 +76,7 @@ class WordEncoder(nn.Module):
         Returns:
             (batch_size, output_dim) - compressed representation of the input
         """
-        word_embeddings = self.quant(word_embeddings)
+        # word_embeddings = self.quant(word_embeddings)
         compressed = self.activation(word_embeddings @ self.encoder_weights)
-        # return compressed
-        return self.dequant(compressed)
+        return compressed
+        # return self.dequant(compressed)
