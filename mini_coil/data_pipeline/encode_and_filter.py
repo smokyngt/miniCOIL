@@ -11,7 +11,7 @@ from mini_coil.data_pipeline.vocab_resolver import VocabResolver
 
 
 def load_model(model_name):
-    model = TokenEmbeddingsModel(model_name=model_name, cuda=True)
+    model = TokenEmbeddingsModel(model_name=model_name, threads=1)
     return model
 
 
