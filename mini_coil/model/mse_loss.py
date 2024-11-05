@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 
 from torch import nn
@@ -11,7 +13,7 @@ class MSELoss(nn.Module):
 
     def forward(
             self,
-            mapping: torch.LongTensor,
+            mapping: Optional[torch.LongTensor],
             prediction: torch.Tensor,
             target: torch.Tensor
     ) -> torch.Tensor:
@@ -26,8 +28,10 @@ class MSELoss(nn.Module):
         Returns:
             loss: () - mean squared error
         """
-
-        mapped_target = target[mapping]
+        if mapping is None:
+            mapped_target = target
+        else:
+            mapped_target = target[mapping]
 
         loss = self.loss(prediction, mapped_target)
         return loss

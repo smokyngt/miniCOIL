@@ -39,10 +39,13 @@ def main():
     sentences = [
         "The bat flew out of the cave at dusk, its wings silhouetted against the twilight sky.",
         "A small bat darted through the trees, barely visible in the moonlight",
+        "Bat dung has been mined as guano from caves and used as fertiliser.",
+        "pokemon bat is a flying type pokemon.",
         "She swung the baseball bat with precision, hitting the ball right out of the park.",
         "He gripped the cricket bat tightly, ready to face the next ball.",
         "She didn’t even bat an eyelash when he told her the shocking news.",
         "She didn't bat an eyelash when he announced the surprise, keeping her composure.",
+        "in the batman comics, the bat was a superhero.",
     ]
 
     embeddings = np.array(list(encode_and_filter(
@@ -63,6 +66,9 @@ def main():
         encoded = encoder(torch.from_numpy(embeddings).float())
         encoded = encoded.cpu().numpy()
 
+    for enc, sentence in zip(encoded.tolist(), sentences):
+        print(enc, sentence)
+
     embeddings = np.load(args.embedding_path)
 
     if not os.path.exists(args.output_dir):
@@ -75,8 +81,8 @@ def main():
 
     length = np.sqrt(embeddings_x ** 2 + embeddings_y ** 2)
 
-    embeddings_x /= length
-    embeddings_y /= length
+    # embeddings_x /= length
+    # embeddings_y /= length
 
     for i in range(encoded.shape[0]):
         plot_embeddings(

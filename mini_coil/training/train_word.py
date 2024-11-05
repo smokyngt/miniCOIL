@@ -1,4 +1,6 @@
 import argparse
+import os
+
 import numpy as np
 
 import lightning as L
@@ -111,6 +113,11 @@ def main():
             train_dataloaders=train_loader,
             val_dataloaders=valid_loader
         )
+
+    output_dir = os.path.dirname(args.output_path)
+    
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir, exist_ok=True)
 
     torch.save(encoder_prepared.state_dict(), args.output_path)
 
