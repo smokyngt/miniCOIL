@@ -2,6 +2,7 @@ import argparse
 import os
 from typing import Iterable
 import json
+import itertools
 
 from qdrant_client import QdrantClient, models
 import numpy as np
@@ -23,6 +24,7 @@ def main():
     parser.add_argument("--collection-name", type=str, default="coil-targets")
     parser.add_argument("--recreate-collection", action="store_true")
     parser.add_argument("--word", type=str)
+    parser.add_argument("--limit", type=int, default=None)
     args = parser.parse_args()
 
     client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
@@ -45,6 +47,7 @@ def main():
             vectors_config=models.VectorParams(
                 size=dim,
                 distance=models.Distance.COSINE,
+                on_disk=True,
             ),
             hnsw_config=models.HnswConfigDiff(
                 m=0,
@@ -62,10 +65,16 @@ def main():
             )
         )
 
+    payloads = load_sentences(args.sentences_path)
+
+    if args.limit:
+        vectors = vectors[:args.limit]
+        payloads = itertools.islice(payloads, args.limit)
+
     client.upload_collection(
         collection_name=collection_name,
         vectors=vectors,
-        payload=map(lambda x: {"word": args.word, **x}, load_sentences(args.sentences_path)),
+        payload=map(lambda x: {"word": args.word, **x}, payloads),
     )
 
 
