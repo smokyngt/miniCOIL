@@ -74,7 +74,7 @@ def main():
 
     client.upload_collection(
         collection_name=collection_name,
-        ids=map(lambda x: hashlib.md5(args.word + x), range(len(vectors))),
+        ids=list(map(lambda x: hashlib.md5((args.word + str(x)).encode()).hexdigest(), range(len(vectors)))),
         vectors=vectors,
         payload=map(lambda x: {"word": args.word, **x}, payloads),
     )
