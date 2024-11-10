@@ -124,7 +124,7 @@ class Encoder(nn.Module):
         return torch.stack((vocab_ids, batch_ids), dim=2)
 
     @classmethod
-    def sum_by_vocab_ids(
+    def avg_by_vocab_ids(
             cls,
             vocab_ids: torch.LongTensor,
             embeddings: torch.Tensor,
@@ -163,7 +163,7 @@ class Encoder(nn.Module):
                 [
                     [0.1, 0.2, 0.3],
                     [0.4, 0.5, 0.6],
-                    [1.7, 1.9, 2.1],
+                    [0.85,0.95,1.05],
                     [1.3, 1.4, 1.5],
                 ],
                 [
@@ -177,7 +177,7 @@ class Encoder(nn.Module):
         returns:
             (total_unique_words_per_batch, 2), (total_unique_words_per_batch, input_dim)
 
-            Returns unique (vocab_id, batch_id) pairs and their corresponding sum of embeddings.
+            Returns unique (vocab_id, batch_id) pairs and their corresponding avg of embeddings.
         """
 
         # (batch_size * seq_len, 2) - token id -> batch id
@@ -208,9 +208,22 @@ class Encoder(nn.Module):
         unique_flattened_embeddings = torch.zeros(
             (unique_flattened_vocab_ids.size(0), embeddings.size(2)), device=embeddings.device)
 
+        # Count of unique vocab ids
+        # (total_unique_vocab_ids)
+        unique_flattened_vocab_ids_count = torch.zeros(unique_flattened_vocab_ids.size(0), device=embeddings.device).long()
+
+        # Count unique vocab ids (a bit hacky way to do it)
+        # (total_unique_vocab_ids)
+        source_of_ones = torch.ones_like(inverse_indices)
+        unique_flattened_vocab_ids_count.index_add_(0, inverse_indices, source_of_ones)
+
         # Sum up embeddings for each unique vocab id
         # (total_unique_vocab_ids, input_dim)
         unique_flattened_embeddings.index_add_(0, inverse_indices, flattened_embeddings)
+
+        # Average embeddings
+        # (total_unique_vocab_ids, input_dim)
+        unique_flattened_embeddings /= unique_flattened_vocab_ids_count.unsqueeze(1)
 
         return unique_flattened_vocab_ids, unique_flattened_embeddings
 
@@ -232,7 +245,7 @@ class Encoder(nn.Module):
         """
         # (total_unique_vocab_ids, 2), (total_unique_vocab_ids, input_dim)
         unique_flattened_vocab_ids_and_batch_ids, unique_flattened_embeddings = \
-            self.sum_by_vocab_ids(vocab_ids, embeddings)
+            self.avg_by_vocab_ids(vocab_ids, embeddings)
 
         # Generate intermediate embeddings
 

@@ -115,7 +115,7 @@ def main():
         )
 
     output_dir = os.path.dirname(args.output_path)
-    
+
     if not os.path.exists(output_dir):
         os.makedirs(output_dir, exist_ok=True)
 

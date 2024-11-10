@@ -1,7 +1,8 @@
+from collections import defaultdict
+from dataclasses import dataclass
 from typing import Iterable, Tuple, List
 
 import numpy as np
-import torch
 from tokenizers import Tokenizer
 from transformers import AutoTokenizer
 
@@ -9,8 +10,19 @@ from transformers import AutoTokenizer
 class VocabResolver:
     def __init__(self, model_repository: str = None, tokenizer: Tokenizer = None):
         self.vocab = {}
+        self.words = []
         self.auto_tokenizer = AutoTokenizer.from_pretrained(model_repository) if model_repository is not None else None
-        self.tokenizer = tokenizer
+        self.tokenizer: Tokenizer = tokenizer
+
+    def tokenize(self, sentence: str) -> np.ndarray:
+        if self.tokenizer is not None:
+            return np.array(self.tokenizer.encode(sentence).ids)
+        return np.array(self.auto_tokenizer(sentence).input_ids)
+
+    def lookup_word(self, word_id: int) -> str:
+        if word_id == 0:
+            return "UNK"
+        return self.words[word_id - 1]
 
     def convert_ids_to_tokens(self, token_ids: np.ndarray) -> list:
         if self.tokenizer is not None:
@@ -20,9 +32,15 @@ class VocabResolver:
     def vocab_size(self):
         return len(self.vocab) + 1
 
+    def save_vocab(self, path):
+        with open(path, "w") as f:
+            for word in self.vocab:
+                f.write(word + "\n")
+
     def add_word(self, word):
         if word not in self.vocab:
             self.vocab[word] = len(self.vocab) + 1
+            self.words.append(word)
 
     def load_vocab(self, path):
         with open(path, "r") as f:
@@ -57,7 +75,7 @@ class VocabResolver:
 
         return result
 
-    def token_ids_to_vocab(self, token_ids: np.ndarray) -> np.ndarray:
+    def resolve_tokens(self, token_ids: np.ndarray) -> (np.ndarray, dict, dict):
         """
         Mark known tokens (including composed tokens) with vocab ids.
 
@@ -76,12 +94,20 @@ class VocabResolver:
         tokens = self.convert_ids_to_tokens(token_ids)
         tokens_mapping = self._reconstruct_bpe(enumerate(tokens))
 
+        counts = defaultdict(int)
+        oov_count = defaultdict(int)
+
         for token, mapped_token_ids in tokens_mapping:
             vocab_id = self.vocab.get(token, 0)
             for token_id in mapped_token_ids:
                 token_ids[token_id] = vocab_id
 
-        return token_ids
+            if vocab_id == 0:
+                oov_count[token] += 1
+            else:
+                counts[vocab_id] += 1
+
+        return token_ids, counts, oov_count
 
     def token_ids_to_vocab_batch(self, token_ids: np.ndarray) -> np.ndarray:
         """
@@ -100,7 +126,7 @@ class VocabResolver:
         """
 
         for i in range(token_ids.shape[0]):
-            self.token_ids_to_vocab(token_ids[i])
+            self.resolve_tokens(token_ids[i])
 
         return token_ids
 
@@ -140,7 +166,7 @@ class VocabResolver:
         return num_tokens, filtered_token_ids, filtered_token_embeddings
 
 
-def main():
+def test_basic_resolver():
     resolver = VocabResolver()
 
     resolver.add_word("bat")
@@ -153,7 +179,7 @@ def main():
         2871, 3191, 2062, 102
     ])
 
-    token_ids = resolver.token_ids_to_vocab(token_ids)
+    token_ids, counts, oov = resolver.resolve_tokens(token_ids)
 
     expected = np.array([0, 0, 2, 2, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 
@@ -176,6 +202,27 @@ def main():
     ])
 
     assert np.all(np.equal(batch, expected))
+
+
+def main():
+    import os
+    from mini_coil.settings import DATA_DIR
+
+    resolver = VocabResolver(model_repository="jinaai/jina-embeddings-v2-small-en")
+
+    resolver.load_vocab(os.path.join(DATA_DIR, "minicoil.ptch.vocab"))
+
+    sentence = "I like to swim close to the bank of the river, cause I am not a very good swimmer. I swim slow."
+
+    token_ids = np.array(resolver.auto_tokenizer([sentence])[0].ids)
+
+    word_ids, counts, oov = resolver.resolve_tokens(token_ids)
+
+    print(word_ids)
+
+    print(counts)
+
+    print(oov)
 
 
 if __name__ == "__main__":

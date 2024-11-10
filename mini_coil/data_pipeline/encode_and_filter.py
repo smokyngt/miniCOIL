@@ -30,7 +30,7 @@ def encode_and_filter(model_name: Optional[str], word: str, sentences: List[str]
 
     for embedding, sentence in zip(model.embed(sentences, batch_size=2), sentences):
         token_ids = np.array(model.tokenize([sentence])[0].ids)
-        word_mask = vocab_resolver.token_ids_to_vocab(token_ids).astype(bool)
+        word_mask, counts, oov = vocab_resolver.resolve_tokens(token_ids).astype(bool)
 
         total_tokens = np.sum(word_mask)
         if total_tokens == 0:
