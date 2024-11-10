@@ -68,5 +68,6 @@ def main():
         payload=map(lambda x: {"word": args.word, **x}, load_sentences(args.sentences_path)),
     )
 
-    if __name__ == "__main__":
-        main()
+
+if __name__ == "__main__":
+    main()
