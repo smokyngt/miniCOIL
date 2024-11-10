@@ -5,8 +5,6 @@ import json
 
 from qdrant_client import QdrantClient, models
 import numpy as np
-import hashlib
-import tqdm
 
 QDRANT_URL = os.environ.get("QDRANT_URL", "http://localhost:6333")
 QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", "")
@@ -22,8 +20,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--sentences-path", type=str, default=None)
     parser.add_argument("--compressed-path", type=str)
-    parser.add_argument("--collection-name", type=str, default="minicoil")
+    parser.add_argument("--collection-name", type=str, default="coil-targets")
     parser.add_argument("--recreate-collection", action="store_true")
+    parser.add_argument("--word", type=str)
     args = parser.parse_args()
 
     client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
@@ -47,14 +46,27 @@ def main():
                 size=dim,
                 distance=models.Distance.COSINE,
             ),
+            hnsw_config=models.HnswConfigDiff(
+                m=0,
+                payload_m=16,
+            )
+        )
+
+        client.create_payload_index(
+            collection_name=collection_name,
+            field_name="word",
+            field_schema=models.KeywordIndexParams(
+                type=models.KeywordIndexType.KEYWORD,
+                is_tenant=True,
+                on_disk=True
+            )
         )
 
     client.upload_collection(
         collection_name=collection_name,
         vectors=vectors,
-        payload=load_sentences(args.sentences_path),
+        payload=map(lambda x: {"word": args.word, **x}, load_sentences(args.sentences_path)),
     )
 
-
-if __name__ == "__main__":
-    main()
+    if __name__ == "__main__":
+        main()
