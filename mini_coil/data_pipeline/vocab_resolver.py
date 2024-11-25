@@ -2,22 +2,61 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import Iterable, Tuple, List
 
+from py_rust_stemmers import SnowballStemmer
+
 import numpy as np
 from tokenizers import Tokenizer
 from transformers import AutoTokenizer
 
+from mini_coil.data_pipeline.stopwords import english_stopwords
 
-class VocabResolver:
-    def __init__(self, model_repository: str = None, tokenizer: Tokenizer = None):
-        self.vocab = {}
-        self.words = []
-        self.auto_tokenizer = AutoTokenizer.from_pretrained(model_repository) if model_repository is not None else None
-        self.tokenizer: Tokenizer = tokenizer
+
+class VocabTokenizer:
 
     def tokenize(self, sentence: str) -> np.ndarray:
-        if self.tokenizer is not None:
-            return np.array(self.tokenizer.encode(sentence).ids)
+        raise NotImplementedError()
+
+    def convert_ids_to_tokens(self, token_ids: np.ndarray) -> list:
+        raise NotImplementedError()
+
+
+class VocabTokenizerAutoTokenizer(VocabTokenizer):
+    def __init__(self, model_repository: str):
+        self.auto_tokenizer = AutoTokenizer.from_pretrained(model_repository)
+
+    def tokenize(self, sentence: str) -> np.ndarray:
         return np.array(self.auto_tokenizer(sentence).input_ids)
+
+    def convert_ids_to_tokens(self, token_ids: np.ndarray) -> list:
+        return self.auto_tokenizer.convert_ids_to_tokens(token_ids)
+
+
+class VocabTokenizerTokenizer(VocabTokenizer):
+    def __init__(self, tokenizer: Tokenizer):
+        self.tokenizer = tokenizer
+
+    def tokenize(self, sentence: str) -> np.ndarray:
+        return np.array(self.tokenizer.encode(sentence).ids)
+
+    def convert_ids_to_tokens(self, token_ids: np.ndarray) -> list:
+        return [self.tokenizer.id_to_token(token_id) for token_id in token_ids]
+
+
+class VocabResolver:
+    def __init__(self, model_repository: str = None, tokenizer: VocabTokenizer = None):
+        # Word to id mapping
+        self.vocab = {}
+        # Id to word mapping
+        self.words = []
+        # Lemma to word mapping
+        self.stem_mapping = {}
+        self.tokenizer: VocabTokenizer = tokenizer
+        self.stemmer = SnowballStemmer("english")
+        if model_repository is not None and tokenizer is None:
+            self.tokenizer = VocabTokenizerAutoTokenizer(model_repository)
+
+    def tokenize(self, sentence: str) -> np.ndarray:
+        return self.tokenizer.tokenize(sentence)
 
     def lookup_word(self, word_id: int) -> str:
         if word_id == 0:
@@ -25,22 +64,46 @@ class VocabResolver:
         return self.words[word_id - 1]
 
     def convert_ids_to_tokens(self, token_ids: np.ndarray) -> list:
-        if self.tokenizer is not None:
-            return [self.tokenizer.id_to_token(token_id) for token_id in token_ids]
-        return self.auto_tokenizer.convert_ids_to_tokens(token_ids)
+        return self.tokenizer.convert_ids_to_tokens(token_ids)
 
     def vocab_size(self):
         return len(self.vocab) + 1
 
     def save_vocab(self, path):
         with open(path, "w") as f:
-            for word in self.vocab:
+            for word in self.words:
                 f.write(word + "\n")
+
+    def save_json_vocab(self, path):
+        import json
+        with open(path, "w") as f:
+            json.dump({
+                "vocab": self.words,
+                "stem_mapping": self.stem_mapping
+            }, f, indent=2)
+
+    def load_json_vocab(self, path):
+        import json
+        with open(path, "r") as f:
+            data = json.load(f)
+            self.words = data["vocab"]
+            self.vocab = {word: idx + 1 for idx, word in enumerate(self.words)}
+            self.stem_mapping = data["stem_mapping"]
+
 
     def add_word(self, word):
         if word not in self.vocab:
             self.vocab[word] = len(self.vocab) + 1
             self.words.append(word)
+            stem = self.stemmer.stem_word(word)
+            if stem not in self.stem_mapping:
+                self.stem_mapping[stem] = word
+            else:
+                existing_word = self.stem_mapping[stem]
+                if len(existing_word) > len(word):
+                    # Prefer shorter words for the same stem
+                    # Example: "swim" is preferred over "swimming"
+                    self.stem_mapping[stem] = word
 
     def load_vocab(self, path):
         with open(path, "r") as f:
@@ -75,7 +138,7 @@ class VocabResolver:
 
         return result
 
-    def resolve_tokens(self, token_ids: np.ndarray) -> (np.ndarray, dict, dict):
+    def resolve_tokens(self, token_ids: np.ndarray) -> (np.ndarray, dict, dict, dict):
         """
         Mark known tokens (including composed tokens) with vocab ids.
 
@@ -89,6 +152,36 @@ class VocabResolver:
                         2871,  3191,  2062, 102
                     ]
 
+            returns:
+                - token_ids with vocab ids
+                    [
+                        0,  151, 151, 0, 0,
+                        912,  0,  0,  0, 332,
+                        332,  332,  0,  7121,  191,
+                        0,  0,  332, 0
+                    ]
+                - counts of each token
+                    {
+                        151: 1,
+                        332: 3,
+                        7121: 1,
+                        191: 1,
+                        912: 1
+                    }
+                - oov counts of each token
+                    {
+                        "the": 1,
+                        "a": 1,
+                        "[CLS]": 1,
+                        "[SEP]": 1,
+                        ...
+                    }
+                - forms of each token
+                    {
+                        "hello": ["hello"],
+                        "world": ["worlds", "world", "worlding"],
+                    }
+
         """
 
         tokens = self.convert_ids_to_tokens(token_ids)
@@ -97,8 +190,24 @@ class VocabResolver:
         counts = defaultdict(int)
         oov_count = defaultdict(int)
 
+        forms = defaultdict(list)
+
         for token, mapped_token_ids in tokens_mapping:
-            vocab_id = self.vocab.get(token, 0)
+            vocab_id = 0
+            if token in english_stopwords:
+                vocab_id = 0
+            elif token in self.vocab:
+                vocab_id = self.vocab[token]
+                forms[token].append(token)
+            elif token in self.stem_mapping:
+                vocab_id = self.vocab[self.stem_mapping[token]]
+                forms[self.stem_mapping[token]].append(token)
+            else:
+                stem = self.stemmer.stem_word(token)
+                if stem in self.stem_mapping:
+                    vocab_id = self.vocab[self.stem_mapping[stem]]
+                    forms[self.stem_mapping[stem]].append(token)
+
             for token_id in mapped_token_ids:
                 token_ids[token_id] = vocab_id
 
@@ -107,7 +216,7 @@ class VocabResolver:
             else:
                 counts[vocab_id] += 1
 
-        return token_ids, counts, oov_count
+        return token_ids, counts, oov_count, forms
 
     def token_ids_to_vocab_batch(self, token_ids: np.ndarray) -> np.ndarray:
         """
@@ -179,7 +288,7 @@ def test_basic_resolver():
         2871, 3191, 2062, 102
     ])
 
-    token_ids, counts, oov = resolver.resolve_tokens(token_ids)
+    token_ids, counts, oov, _forms = resolver.resolve_tokens(token_ids)
 
     expected = np.array([0, 0, 2, 2, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 
@@ -210,19 +319,21 @@ def main():
 
     resolver = VocabResolver(model_repository="jinaai/jina-embeddings-v2-small-en")
 
-    resolver.load_vocab(os.path.join(DATA_DIR, "minicoil.ptch.vocab"))
+    resolver.load_json_vocab(os.path.join(DATA_DIR, "minicoil.ptch.vocab"))
 
-    sentence = "I like to swim close to the bank of the river, cause I am not a very good swimmer. I swim slow."
+    sentence = "I like to swim close to the bank of the river, cause I am not a very good swimmer. He swims slow."
 
-    token_ids = np.array(resolver.auto_tokenizer([sentence])[0].ids)
+    token_ids = np.array(resolver.tokenizer.tokenize(sentence))
 
-    word_ids, counts, oov = resolver.resolve_tokens(token_ids)
+    word_ids, counts, oov, forms = resolver.resolve_tokens(token_ids)
 
-    print(word_ids)
+    print("word_ids", word_ids)
 
-    print(counts)
+    print("counts", counts)
 
-    print(oov)
+    print("oov", oov)
+
+    print("forms", forms)
 
 
 if __name__ == "__main__":

@@ -10,7 +10,7 @@ import numpy as np
 import torch
 from fastembed.late_interaction.token_embeddings import TokenEmbeddingsModel
 
-from mini_coil.data_pipeline.vocab_resolver import VocabResolver
+from mini_coil.data_pipeline.vocab_resolver import VocabResolver, VocabTokenizerTokenizer
 from mini_coil.model.encoder import Encoder
 
 
@@ -28,8 +28,8 @@ class MiniCOIL:
         self.sentence_encoder = TokenEmbeddingsModel(model_name=sentence_encoder_model, threads=1)
 
         self.vocab_path = vocab_path
-        self.vocab_resolver = VocabResolver(tokenizer=self.sentence_encoder.tokenizer)
-        self.vocab_resolver.load_vocab(vocab_path)
+        self.vocab_resolver = VocabResolver(tokenizer=VocabTokenizerTokenizer(self.sentence_encoder.tokenizer))
+        self.vocab_resolver.load_json_vocab(vocab_path)
 
         self.word_encoder_path = word_encoder_path
         self.word_encoder = Encoder(
@@ -53,7 +53,7 @@ class MiniCOIL:
             for embedding, sentence in zip(self.sentence_encoder.embed(sentences, batch_size=4), sentences):
                 token_ids = np.array(self.sentence_encoder.tokenize([sentence])[0].ids)
 
-                word_ids, counts, oov = self.vocab_resolver.resolve_tokens(token_ids)
+                word_ids, counts, oov, forms = self.vocab_resolver.resolve_tokens(token_ids)
 
                 # Size: (1, words)
                 word_ids = torch.from_numpy(word_ids).long().unsqueeze(0)

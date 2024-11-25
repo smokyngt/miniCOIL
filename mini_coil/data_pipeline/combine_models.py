@@ -4,6 +4,7 @@ import os
 import tqdm
 import torch
 
+from mini_coil.data_pipeline.stopwords import english_stopwords
 from mini_coil.data_pipeline.vocab_resolver import VocabResolver
 from mini_coil.model.encoder import Encoder
 from mini_coil.model.word_encoder import WordEncoder
@@ -31,6 +32,8 @@ def main():
     filtered_vocab = []
 
     for word in vocab:
+        if word in english_stopwords:
+            continue
         model_path = os.path.join(args.models_dir, f"model-{word}.ptch")
         if os.path.exists(model_path):
             filtered_vocab.append(word)
@@ -66,7 +69,7 @@ def main():
 
     torch.save(encoder.state_dict(), args.output_path)
 
-    vocab_resolver.save_vocab(args.output_path + ".vocab")
+    vocab_resolver.save_json_vocab(args.output_path + ".vocab")
 
 
 if __name__ == '__main__':

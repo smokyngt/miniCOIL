@@ -7,7 +7,7 @@ import tqdm
 from fastembed.late_interaction.token_embeddings import TokenEmbeddingsModel
 from npy_append_array import NpyAppendArray
 
-from mini_coil.data_pipeline.vocab_resolver import VocabResolver
+from mini_coil.data_pipeline.vocab_resolver import VocabResolver, VocabTokenizerTokenizer
 
 
 def load_model(model_name):
@@ -24,13 +24,13 @@ def read_sentences(file_path: str, limit_length: int = 4096) -> List[str]:
 
 def encode_and_filter(model_name: Optional[str], word: str, sentences: List[str]) -> Iterable[np.ndarray]:
     model = load_model(model_name)
-    vocab_resolver = VocabResolver(tokenizer=model.tokenizer)
+    vocab_resolver = VocabResolver(tokenizer=VocabTokenizerTokenizer(model.tokenizer))
 
     vocab_resolver.add_word(word)
 
     for embedding, sentence in zip(model.embed(sentences, batch_size=2), sentences):
         token_ids = np.array(model.tokenize([sentence])[0].ids)
-        word_mask, counts, oov = vocab_resolver.resolve_tokens(token_ids).astype(bool)
+        word_mask, counts, oov, _forms = vocab_resolver.resolve_tokens(token_ids).astype(bool)
 
         total_tokens = np.sum(word_mask)
         if total_tokens == 0:

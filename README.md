@@ -49,9 +49,12 @@ So the process of training is as follows:
 7. Construct a training set for the Encoder model:
    1. Download sampled sentences with `mini_coil.data_pipeline.load_sentences`
    2. Encode sentences with smaller transformer model, but use only token embeddings for given word with `mini_coil.data_pipeline.encode_and_filter`
-8. **we are here**
-9. Train encoder **for each word** to convert word embeddings into target embeddings
-10. Merge encoders for each word into a single model, quantize and save model as ONNX
-
+8. Train encoder **for each word** to convert word embeddings into target embeddings with `mini_coil.train.train_word`
+9. Merge encoders for each word into a single model `mini_coil.data_pipeline.combine_models`
+10. **We are here**
+11. Make visualizations
+12. Benchmark
+13. Quantize (optional)
+14. Convert to ONNX
 
 
