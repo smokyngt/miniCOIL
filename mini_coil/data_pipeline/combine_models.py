@@ -3,6 +3,7 @@ import os
 
 import tqdm
 import torch
+import numpy as np
 
 from mini_coil.data_pipeline.stopwords import english_stopwords
 from mini_coil.data_pipeline.vocab_resolver import VocabResolver
@@ -58,6 +59,11 @@ def main():
 
     print("combined_params", combined_params.shape)
     print("vocab_size", vocab_size)
+
+    combined_params_numpy = combined_params.numpy()
+
+    # Save numpy file as well
+    np.save(args.output_path + ".npy", combined_params_numpy)
 
     encoder = Encoder(
         input_dim=args.input_dim,

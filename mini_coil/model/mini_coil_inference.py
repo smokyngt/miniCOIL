@@ -38,17 +38,14 @@ class MiniCOIL:
         self.word_encoder_path = word_encoder_path
 
         self.word_encoder = None
-        self.load_encoder_pytorch()
 
-    def load_encoder_pytorch(self):
-        self.word_encoder = Encoder(
-            input_dim=self.input_dim,
-            output_dim=self.output_dim,
-            vocab_size=self.vocab_resolver.vocab_size()
-        )
+        self.load_encoder_numpy()
 
-        self.word_encoder.load_state_dict(torch.load(self.word_encoder_path, weights_only=True))
-        self.word_encoder.eval()
+    def load_encoder_numpy(self):
+        weights = np.load(self.word_encoder_path)
+        self.word_encoder = EncoderNumpy(weights)
+        assert self.word_encoder.input_dim == self.input_dim
+        assert self.word_encoder.output_dim == self.output_dim
 
     def encode(self, sentences: list) -> List[dict]:
         """
@@ -64,17 +61,17 @@ class MiniCOIL:
                 word_ids, counts, oov, forms = self.vocab_resolver.resolve_tokens(token_ids)
 
                 # Size: (1, words)
-                word_ids = torch.from_numpy(word_ids).long().unsqueeze(0)
+                word_ids = np.expand_dims(word_ids, axis=0)
                 # Size: (1, words, embedding_size)
-                embedding = torch.from_numpy(embedding).float().unsqueeze(0)
+                embedding = np.expand_dims(embedding, axis=0)
 
                 with ipdb.launch_ipdb_on_exception():
                     # Size of word_ids_mapping: (unique_words, 2) - [vocab_id, batch_id]
                     # Size of embeddings: (unique_words, embedding_size)
                     ids_mapping, embeddings = self.word_encoder.forward(word_ids, embedding)
 
-                    words_ids = ids_mapping[:, 0].cpu().numpy()
-                    embeddings = embeddings.cpu().numpy()
+                    # Size of counts: (unique_words)
+                    words_ids = ids_mapping[:, 0]
 
                 sentence_result = {}
 

@@ -37,7 +37,7 @@ class Encoder(nn.Module):
          │                     │
          └─────────────────────┘
 
-         Final liner transformation is accompanied by a non-linear activation function: Sigmoid.
+         Final liner transformation is accompanied by a non-linear activation function: Tanh.
 
          Tanh is used to ensure that the output is in the range [-1, 1].
          It would be easier to visually interpret the output of the model, assuming that each dimension
