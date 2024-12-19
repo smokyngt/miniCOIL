@@ -104,8 +104,11 @@ def main():
         accelerator=accelerator,
     )
 
+    default_batch_size = 200
+    val_batch = min(val_embeddings.shape[0] - 1, default_batch_size)
+
     train_loader = DataLoader(train_embeddings, train_target, use_cuda=args.gpu)
-    valid_loader = DataLoader(val_embeddings, val_target, use_cuda=args.gpu, batch_size=32)
+    valid_loader = DataLoader(val_embeddings, val_target, use_cuda=args.gpu, batch_size=val_batch)
 
     with launch_ipdb_on_exception():
         trainer.fit(
