@@ -11,7 +11,6 @@ import torch
 from fastembed.late_interaction.token_embeddings import TokenEmbeddingsModel
 
 from mini_coil.data_pipeline.vocab_resolver import VocabResolver, VocabTokenizerTokenizer
-from mini_coil.model.encoder import Encoder
 from mini_coil.model.encoder_numpy import EncoderNumpy
 
 

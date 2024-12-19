@@ -105,7 +105,7 @@ def main():
     )
 
     train_loader = DataLoader(train_embeddings, train_target, use_cuda=args.gpu)
-    valid_loader = DataLoader(val_embeddings, val_target, use_cuda=args.gpu)
+    valid_loader = DataLoader(val_embeddings, val_target, use_cuda=args.gpu, batch_size=32)
 
     with launch_ipdb_on_exception():
         trainer.fit(

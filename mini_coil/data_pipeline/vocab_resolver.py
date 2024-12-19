@@ -1,5 +1,4 @@
 from collections import defaultdict
-from dataclasses import dataclass
 from typing import Iterable, Tuple, List
 
 from py_rust_stemmers import SnowballStemmer
