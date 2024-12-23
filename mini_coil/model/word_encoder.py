@@ -19,14 +19,14 @@ from torch.nn import init
 
 class WordEncoder(nn.Module):
     """
-        WordEncoder(768, 4)
+        WordEncoder(512, 4)
 
         Will look like this:
 
 
                                       Linear transformation
          ┌─────────────────────┐      ┌─────────┐    ┌─────────┐
-         │ Token Embedding(768)├─────►│768->4   ├───►│Tanh     ├──► 4d representation
+         │ Token Embedding(512)├─────►│512->4   ├───►│Tanh     ├──► 4d representation
          └─────────────────────┘      └─────────┘    └─────────┘
 
 
@@ -42,7 +42,8 @@ class WordEncoder(nn.Module):
             input_dim: int,
             output_dim: int,
             device=None,
-            dtype=None
+            dtype=None,
+            dropout: float = 0.05
     ):
         factory_kwargs = {'device': device, 'dtype': dtype}
         super().__init__()
@@ -51,7 +52,7 @@ class WordEncoder(nn.Module):
         self.device = device
         self.dtype = dtype
 
-        self.dropout = nn.Dropout(0.05)
+        self.dropout = nn.Dropout(dropout)
 
         # self.quant = torch.quantization.QuantStub()
         # self.dequant = torch.quantization.DeQuantStub()

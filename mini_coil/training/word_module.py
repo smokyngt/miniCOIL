@@ -15,21 +15,27 @@ class WordModule(L.LightningModule):
     def __init__(
             self,
             encoder: WordEncoder,
+            lr: float = 2e-3,
+            factor: float = 0.5,
+            patience: int = 5,
     ):
         super().__init__()
         self.encoder: WordEncoder = encoder
         self.loss = CosineLoss()
+        self.lr = lr
+        self.factor = factor
+        self.patience = patience
 
     def configure_optimizers(self):
-        optimizer = optim.Adam(self.parameters(), lr=2e-3)
+        optimizer = optim.Adam(self.parameters(), lr=self.lr)
         return {
             "optimizer": optimizer,
             "lr_scheduler": {
                 "scheduler": ReduceLROnPlateau(
                     optimizer,
                     mode='min',
-                    factor=0.5,
-                    patience=5,
+                    factor=self.factor,
+                    patience=self.patience,
                     verbose=True,
                     threshold=1e-4,
                 ),
@@ -76,8 +82,7 @@ class WordModule(L.LightningModule):
             batch_idx: int
     ):
         loss = self.encode_decode_loss(batch)
-
-        self.log("train_loss", loss)
+        self.log("train_loss", loss, on_epoch=True, on_step=False, prog_bar=True, logger=True)
 
         return loss
 

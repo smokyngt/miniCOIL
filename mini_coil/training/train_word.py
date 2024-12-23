@@ -12,10 +12,11 @@ from mini_coil.model.word_encoder import WordEncoder
 from mini_coil.training.word_module import WordModule
 
 
-def get_encoder(input_dim, output_dim):
+def get_encoder(input_dim, output_dim, dropout: float = 0.05):
     return WordEncoder(
         input_dim=input_dim,
         output_dim=output_dim,
+        dropout=dropout
     )
 
 
@@ -72,18 +73,26 @@ def main():
     parser.add_argument('--log-dir', type=str)
     parser.add_argument('--gpu', action='store_true')
     parser.add_argument("--epochs", type=int, default=500)
+    parser.add_argument("--val-size", type=float, default=0.1)
+    parser.add_argument("--batch-size", type=int, default=200)
+    parser.add_argument("--dropout", type=float, default=0.05)
+    parser.add_argument("--lr", type=float, default=2e-3)
+    parser.add_argument("--factor", type=float, default=0.5)
+    parser.add_argument("--patience", type=int, default=5)
+
+
     args = parser.parse_args()
 
     embedding = np.load(args.embedding_path)
 
     target = np.load(args.target_path)
 
-    train_embeddings, train_target, val_embeddings, val_target = split_train_val(embedding, target)
+    train_embeddings, train_target, val_embeddings, val_target = split_train_val(embedding, target, val_size=args.val_size)
 
     input_dim = train_embeddings.shape[1]
     output_dim = train_target.shape[1]
 
-    encoder_load = get_encoder(input_dim, output_dim)
+    encoder_load = get_encoder(input_dim, output_dim, dropout=args.dropout)
 
     encoder_prepared = encoder_load
 
@@ -101,18 +110,19 @@ def main():
         max_epochs=args.epochs,
         enable_checkpointing=False,
         logger=CSVLogger(args.log_dir),
+        enable_progress_bar=True,
         accelerator=accelerator,
     )
 
-    default_batch_size = 200
+    default_batch_size = args.batch_size
     val_batch = min(val_embeddings.shape[0] - 1, default_batch_size)
 
-    train_loader = DataLoader(train_embeddings, train_target, use_cuda=args.gpu)
+    train_loader = DataLoader(train_embeddings, train_target, batch_size=args.batch_size, use_cuda=args.gpu)
     valid_loader = DataLoader(val_embeddings, val_target, use_cuda=args.gpu, batch_size=val_batch)
 
     with launch_ipdb_on_exception():
         trainer.fit(
-            model=WordModule(encoder_prepared),
+            model=WordModule(encoder_prepared, lr=args.lr, factor=args.factor, patience=args.patience),
             train_dataloaders=train_loader,
             val_dataloaders=valid_loader
         )
