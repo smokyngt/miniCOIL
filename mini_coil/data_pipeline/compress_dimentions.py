@@ -9,6 +9,7 @@ from scipy.sparse import csr_matrix
 from mini_coil.settings import DATA_DIR
 
 DEFAULT_SAMPLE_SIZE = 4000
+DEFAULT_LIMIT = 20
 
 QDRANT_URL = os.environ.get("QDRANT_URL", "http://localhost")
 QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", "default")
@@ -17,12 +18,27 @@ QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", "default")
 def query_qdrant_matrix_api(
         collection_name: str,
         sample_size: int = DEFAULT_SAMPLE_SIZE,
-        limit: int = 20,
+        limit: int = DEFAULT_LIMIT,
         word: str = None,
 ) -> models.SearchMatrixOffsetsResponse:
     time_start = time.time()
-
     qdrant = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY, port=80, timeout=1000)
+
+    existing_sample_size = qdrant.count(
+        collection_name=collection_name,
+        exact=True,
+        count_filter=models.Filter(
+            must=[
+                models.FieldCondition(
+                    key="sentence",
+                    match=models.MatchText(text=word)
+                    )
+                ]
+            )
+    ).count
+
+    if existing_sample_size < sample_size:
+        print(f'''Only {existing_sample_size} samples available for "{word}"''')
 
     response = qdrant.search_matrix_offsets(
         collection_name=collection_name,
@@ -49,6 +65,7 @@ def query_qdrant_matrix_api(
 def compress_matrix(
         matrix: csr_matrix,
         dim: int = 2,
+        n_neighbours: int = 20
 ):
     from umap import UMAP
 
@@ -58,7 +75,7 @@ def compress_matrix(
         metric="precomputed",
         n_components=n_components,
         output_metric="hyperboloid",
-        n_neighbors=20,
+        n_neighbors=n_neighbours,
     )
 
     start_time = time.time()
@@ -67,7 +84,7 @@ def compress_matrix(
     return compressed_matrix
 
 
-def closest_points(vectors: np.ndarray, vector: np.ndarray, n: int = 5):
+def closest_points(vectors: np.ndarray, vector: np.ndarray, precision_neighbours: int = 10):
     """
     Select top n closest points to the given vector using cosine similarity
     """
@@ -77,14 +94,17 @@ def closest_points(vectors: np.ndarray, vector: np.ndarray, n: int = 5):
 
     indices = np.argsort(similarities, axis=0)[::-1]
 
-    return indices[:n].flatten()
+    return indices[:precision_neighbours].flatten()
 
 
-def estimate_precision(matrix: csr_matrix, compressed_vectors: np.ndarray, n: int = 100) -> float:
+def estimate_precision(matrix: csr_matrix, compressed_vectors: np.ndarray, precision_n: int = 100, precision_neighbours: int = 10) -> float:
+    import numpy as np
+    
     precision = []
+    random_indices = np.random.choice(len(compressed_vectors), size=precision_n, replace=False)
 
-    for i in range(n):
-        closest = closest_points(compressed_vectors, compressed_vectors[i], n=10)
+    for i in random_indices:
+        closest = closest_points(compressed_vectors, compressed_vectors[i], precision_neighbours)
         closest = closest[closest != i]
 
         precision.append(len(set(closest) & set(matrix[i].indices)) / len(closest))
@@ -100,12 +120,12 @@ def plot_embeddings(embeddings, save_path: str):
     plt.close()
 
 
-def get_matrix(collection_name: str, word: str, output_dir, sample_size: int = DEFAULT_SAMPLE_SIZE):
+def get_matrix(collection_name: str, word: str, output_dir, sample_size: int = DEFAULT_SAMPLE_SIZE, limit: int = DEFAULT_LIMIT):
     retry = 0
 
     while retry < 3:
         try:
-            result = query_qdrant_matrix_api(collection_name, word=word, sample_size=sample_size)
+            result = query_qdrant_matrix_api(collection_name, word=word, sample_size=sample_size, limit=limit)
             offsets_row = np.array(result.offsets_row)
             offsets_col = np.array(result.offsets_col)
             scores = np.array(result.scores)
@@ -135,6 +155,11 @@ def main():
     parser.add_argument("--plot", action="store_true")
     parser.add_argument("--sample-size", type=int, default=DEFAULT_SAMPLE_SIZE)
     parser.add_argument("--overwrite", action="store_true")
+    parser.add_argument('--limit', type=int, default=20)
+    parser.add_argument('--n_neighbours', type=int, default=20)
+    parser.add_argument('--precision_n', type=int, default=100)
+    parser.add_argument('--precision_neighbours', type=int, default=10)
+
     args = parser.parse_args()
 
     collection_name = args.collection_name
@@ -152,12 +177,12 @@ def main():
         print(f"File {path} already exists. Skipping")
         return
 
-    matrix = get_matrix(collection_name, word, sample_size=args.sample_size, output_dir=args.output_dir)
-
-    compressed_vectors = compress_matrix(matrix, dim=args.dim)
-
     if not os.path.exists(output_dir):
         os.makedirs(output_dir, exist_ok=True)
+
+    matrix = get_matrix(collection_name, word, sample_size=args.sample_size, limit=args.limit, output_dir=args.output_dir)
+
+    compressed_vectors = compress_matrix(matrix, dim=args.dim, n_neighbours=args.n_neighbours)
 
     np.save(path, compressed_vectors)
 
@@ -177,7 +202,7 @@ def main():
         plot_embeddings(np.stack([disk_a, disk_b], axis=1),
                         os.path.join(output_dir, f"compressed_matrix_{word}_hyperboloid.png"))
 
-        precision = estimate_precision(matrix, compressed_vectors)
+        precision = estimate_precision(matrix, compressed_vectors, precision_n=args.precision_n, precision_neighbours=args.precision_neighbours)
         print(f"Precision: {precision}")
 
         # precision_2d = estimate_precision(matrix, compressed_vectors_2d)
