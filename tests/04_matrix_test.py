@@ -10,9 +10,11 @@ from scipy import stats
 
 
 def load_triplets(filepath):
+    triplets = []
     with open(filepath, 'r') as f:
-        content = f.read()
-        triplets = ast.literal_eval(content)
+        for line in f:
+            a, b, c = line.split()
+            triplets.append((int(a), int(b), int(c)))
     return triplets
 
 
