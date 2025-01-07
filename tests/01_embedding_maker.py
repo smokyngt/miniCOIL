@@ -1,13 +1,9 @@
 import argparse
 
 import numpy as np
-import torch
 import tqdm
-from fastembed.late_interaction.token_embeddings import TokenEmbeddingsModel
 from fastembed.text import TextEmbedding
-
 from sentence_transformers import SentenceTransformer
-from transformers import AutoModel, AutoTokenizer
 
 from mini_coil.model.mini_coil_inference import MiniCOIL
 

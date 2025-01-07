@@ -1,19 +1,21 @@
 import argparse
-import os
-from collections import defaultdict
-from typing import List, Dict
 import json
-import tqdm
+import os
+from os import getenv
+from typing import List
 
 from qdrant_client import QdrantClient
 
-QDRANT_URL = os.environ.get("QDRANT_URL", "http://localhost:6333")
-QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", "")
+QDRANT_URL = os.environ.get("QDRANT_URL", getenv("QDRANT_URL", "http://localhost:80"))
+QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", getenv("QDRANT_API_KEY", ""))
 
 client = QdrantClient(
     url=QDRANT_URL,
     api_key=QDRANT_API_KEY,
-    prefer_grpc=True,
+    prefer_grpc=False,
+    port=80,
+    timeout=999,
+    https=False,
 )
 
 
@@ -41,17 +43,24 @@ def load_matrix_ids(directory: str, word: str):
 
 
 def load_sentences(collection_name: str, ids: List[str]) -> List[dict]:
-    points = client.retrieve(
-        collection_name,
-        ids,
-        with_payload=True,
-        with_vectors=False
-    )
+    points_to_abstracts = {}
+    batch_size = 10000
 
-    points_to_abstracts = dict(
-        (point.id, point.payload)
-        for point in points
-    )
+    for i in range(0, len(ids), batch_size):
+        print("Retrieving batch", i + 1, "of", len(ids) // batch_size)
+        batch_ids = ids[i:i + batch_size]
+        points = client.retrieve(
+            collection_name,
+            batch_ids,
+            with_payload=True,
+            with_vectors=False,
+        )
+
+        batch_points = dict(
+            (point.id, point.payload)
+            for point in points
+        )
+        points_to_abstracts.update(batch_points)
 
     result = []
     for point_id in ids:

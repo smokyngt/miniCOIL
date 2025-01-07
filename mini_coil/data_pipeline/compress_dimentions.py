@@ -1,6 +1,7 @@
 import argparse
 import os.path
 import time
+from os import getenv
 
 import numpy as np
 from qdrant_client import QdrantClient, models
@@ -11,8 +12,8 @@ from mini_coil.settings import DATA_DIR
 DEFAULT_SAMPLE_SIZE = 4000
 DEFAULT_LIMIT = 20
 
-QDRANT_URL = os.environ.get("QDRANT_URL", "http://localhost")
-QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", "default")
+QDRANT_URL = os.environ.get("QDRANT_URL", getenv("QDRANT_URL", "http://localhost:80"))
+QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", getenv("QDRANT_API_KEY", ""))
 
 
 def query_qdrant_matrix_api(
@@ -22,7 +23,9 @@ def query_qdrant_matrix_api(
         word: str = None,
 ) -> models.SearchMatrixOffsetsResponse:
     time_start = time.time()
-    qdrant = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY, port=80, timeout=1000)
+    qdrant = QdrantClient(
+        url=QDRANT_URL,
+        api_key=QDRANT_API_KEY, port=80, timeout=1000)
 
     existing_sample_size = qdrant.count(
         collection_name=collection_name,
@@ -32,9 +35,9 @@ def query_qdrant_matrix_api(
                 models.FieldCondition(
                     key="sentence",
                     match=models.MatchText(text=word)
-                    )
-                ]
-            )
+                )
+            ]
+        )
     ).count
 
     if existing_sample_size < sample_size:
@@ -97,9 +100,10 @@ def closest_points(vectors: np.ndarray, vector: np.ndarray, precision_neighbours
     return indices[:precision_neighbours].flatten()
 
 
-def estimate_precision(matrix: csr_matrix, compressed_vectors: np.ndarray, precision_n: int = 100, precision_neighbours: int = 10) -> float:
+def estimate_precision(matrix: csr_matrix, compressed_vectors: np.ndarray, precision_n: int = 100,
+                       precision_neighbours: int = 10) -> float:
     import numpy as np
-    
+
     precision = []
     random_indices = np.random.choice(len(compressed_vectors), size=precision_n, replace=False)
 
@@ -120,7 +124,8 @@ def plot_embeddings(embeddings, save_path: str):
     plt.close()
 
 
-def get_matrix(collection_name: str, word: str, output_dir, sample_size: int = DEFAULT_SAMPLE_SIZE, limit: int = DEFAULT_LIMIT):
+def get_matrix(collection_name: str, word: str, output_dir, sample_size: int = DEFAULT_SAMPLE_SIZE,
+               limit: int = DEFAULT_LIMIT):
     retry = 0
 
     while retry < 3:
@@ -180,7 +185,8 @@ def main():
     if not os.path.exists(output_dir):
         os.makedirs(output_dir, exist_ok=True)
 
-    matrix = get_matrix(collection_name, word, sample_size=args.sample_size, limit=args.limit, output_dir=args.output_dir)
+    matrix = get_matrix(collection_name, word, sample_size=args.sample_size, limit=args.limit,
+                        output_dir=args.output_dir)
 
     compressed_vectors = compress_matrix(matrix, dim=args.dim, n_neighbours=args.n_neighbours)
 
@@ -202,7 +208,8 @@ def main():
         plot_embeddings(np.stack([disk_a, disk_b], axis=1),
                         os.path.join(output_dir, f"compressed_matrix_{word}_hyperboloid.png"))
 
-        precision = estimate_precision(matrix, compressed_vectors, precision_n=args.precision_n, precision_neighbours=args.precision_neighbours)
+        precision = estimate_precision(matrix, compressed_vectors, precision_n=args.precision_n,
+                                       precision_neighbours=args.precision_neighbours)
         print(f"Precision: {precision}")
 
         # precision_2d = estimate_precision(matrix, compressed_vectors_2d)
