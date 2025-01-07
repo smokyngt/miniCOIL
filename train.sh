@@ -5,7 +5,12 @@ set -u # exit on using unset variable
 set -o pipefail # exit on error in pipe
 
 CURRENT_DIR=$(pwd -L)
-COLLECTION_NAME=$1
+#COLLECTION_NAME=$1
+TARGET_WORD=bat
+DIM=4
+SAMPLES=4000
+NEIGHBORS=20
+LMODEL=mxbai-large
 
 . venv/bin/activate || . .venv/bin/activate || true
 
@@ -13,13 +18,13 @@ COLLECTION_NAME=$1
 
 ## Split data into sentences
 #python -m mini_coil.data_pipeline.split_sentences \
-#  --input-file "${CURRENT_DIR}/data/openwebtext-1920-sentences-vector.txt.gz" \
-#  --output-file "${CURRENT_DIR}/data/openwebtext-sentences/openwebtext-1920-splitted-vector.txt.gz"
+#  --input-file "${CURRENT_DIR}/data/openwebtext-1920-sentences-"${TARGET_WORD}".txt.gz" \
+#  --output-file "${CURRENT_DIR}/data/openwebtext-sentences/openwebtext-1920-splitted-"${TARGET_WORD}".txt.gz"
 
 ## Encode sentences with transformer model
 #python -m  mini_coil.data_pipeline.encode_targets \
-#  --input-file "${CURRENT_DIR}/data/openwebtext-1920-sentences-vector.txt.gz" \
-#  --output-file "${CURRENT_DIR}/data/output/openwebtext-1920-splitted-vector-encodings"
+#  --input-file "${CURRENT_DIR}/data/openwebtext-1920-sentences-"${TARGET_WORD}".txt.gz" \
+#  --output-file "${CURRENT_DIR}/data/output/openwebtext-1920-splitted-"${TARGET_WORD}"-encodings"
 
 ## Upload encoded sentences to Qdrant
 #python -m mini_coil.data_pipeline.upload_to_qdrant \
@@ -29,40 +34,40 @@ COLLECTION_NAME=$1
 
 ## Sample sentences with specified words and apply dimensionality reduction
 python -m mini_coil.data_pipeline.compress_dimentions \
-  --output-dir data/umap-8000-20-4d-mxbai-large \
-  --sample-size 8000 --dim 4 --word "vector" --overwrite \
-  --limit 80 --n_neighbours 80
+  --output-dir data/umap-"${SAMPLES}"-"${NEIGHBORS}"-"${DIM}"d-"${LMODEL}" \
+  --sample-size "${SAMPLES}" --dim "${DIM}" --word "${TARGET_WORD}" --overwrite \
+  --limit ${NEIGHBORS} --n_neighbours ${NEIGHBORS}
 
 echo "Compressed dimentions"
 ## Download sampled sentences
 python -m mini_coil.data_pipeline.load_sentences \
-   --word "vector" \
-   --matrix-dir data/umap-8000-20-4d-mxbai-large \
-   --output-dir data/umap-8000-20-4d-mxbai-large-sentences
+   --word "${TARGET_WORD}" \
+   --matrix-dir data/umap-"${SAMPLES}"-"${NEIGHBORS}"-"${DIM}"d-"${LMODEL}" \
+   --output-dir data/umap-"${SAMPLES}"-"${NEIGHBORS}"-"${DIM}"d-"${LMODEL}"-sentences
 
 echo "Loaded sentences"
 ## Encode sentences with smaller transformer model
 python -m mini_coil.data_pipeline.encode_and_filter \
-   --sentences-file data/umap-8000-20-4d-mxbai-large-sentences/sentences-vector.jsonl \
-   --output-file data/umap-8000-20-4d-mxbai-large-input/word-emb-vector.npy \
-   --word "vector" \
-   --sample-size 8000
+   --sentences-file data/umap-"${SAMPLES}"-"${NEIGHBORS}"-"${DIM}"d-"${LMODEL}"-sentences/sentences-"${TARGET_WORD}".jsonl \
+   --output-file data/umap-"${SAMPLES}"-"${NEIGHBORS}"-"${DIM}"d-"${LMODEL}"-input/word-emb-"${TARGET_WORD}".npy \
+   --word "${TARGET_WORD}" \
+   --sample-size "${SAMPLES}"
 
 echo "Encoded sentences"
 ##Train encoder **for each word**
  python -m mini_coil.training.train_word \
-  --embedding-path data/umap-8000-20-4d-mxbai-large-input/word-emb-vector.npy \
-  --target-path data/umap-8000-20-4d-mxbai-large/compressed_matrix_vector.npy \
-  --log-dir data/train_logs/log_vector \
-  --output-path data/umap-8000-20-4d-mxbai-large-models/model-vector.ptch \
+  --embedding-path data/umap-"${SAMPLES}"-"${NEIGHBORS}"-"${DIM}"d-"${LMODEL}"-input/word-emb-"${TARGET_WORD}".npy \
+  --target-path data/umap-"${SAMPLES}"-"${NEIGHBORS}"-"${DIM}"d-"${LMODEL}"/compressed_matrix_"${TARGET_WORD}".npy \
+  --log-dir data/train_logs/log_"${TARGET_WORD}" \
+  --output-path data/umap-"${SAMPLES}"-"${NEIGHBORS}"-"${DIM}"d-"${LMODEL}"-models/model-"${TARGET_WORD}".ptch \
   --epochs 500
 #  --gpu
 
 echo "Trained encoder"
 ## Merge encoders for each word into a single model
 python -m mini_coil.data_pipeline.combine_models \
-  --models-dir "${CURRENT_DIR}/data/umap-8000-20-4d-mxbai-large-models" \
+  --models-dir "${CURRENT_DIR}/data/umap-${SAMPLES}-${NEIGHBORS}-${DIM}d-${LMODEL}-models" \
   --vocab-path "${CURRENT_DIR}/data/30k-vocab-filtered.txt" \
-  --output-path "data/model_8000_4d" \
-  --output-dim 4
+  --output-path "data/model_${SAMPLES}_${DIM}d" \
+  --output-dim "${DIM}"
 
