@@ -1,10 +1,10 @@
 import argparse
 import json
+import os
 from typing import List, Optional, Iterable
 
 import numpy as np
 import tqdm
-import os
 from fastembed.late_interaction.token_embeddings import TokenEmbeddingsModel
 from npy_append_array import NpyAppendArray
 
@@ -62,7 +62,6 @@ def main():
         word=args.word,
         sentences=sentences
     )
-    
 
     output_file = args.output_file
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
