@@ -32,7 +32,7 @@ LMODEL=mxbai-large
 #  --input-text
 #  --collection-name ${COLLECTION_NAME}
 
-## Sample sentences with specified words and apply dimensionality reduction
+# Sample sentences with specified words and apply dimensionality reduction
 python -m mini_coil.data_pipeline.compress_dimentions \
   --output-dir data/umap-"${SAMPLES}"-"${NEIGHBORS}"-"${DIM}"d-"${LMODEL}" \
   --sample-size "${SAMPLES}" --dim "${DIM}" --word "${TARGET_WORD}" --overwrite \
@@ -54,16 +54,16 @@ python -m mini_coil.data_pipeline.encode_and_filter \
    --sample-size "${SAMPLES}"
 
 echo "Encoded sentences"
-##Train encoder **for each word**
+#Train encoder **for each word**
  python -m mini_coil.training.train_word \
   --embedding-path data/umap-"${SAMPLES}"-"${NEIGHBORS}"-"${DIM}"d-"${LMODEL}"-input/word-emb-"${TARGET_WORD}".npy \
   --target-path data/umap-"${SAMPLES}"-"${NEIGHBORS}"-"${DIM}"d-"${LMODEL}"/compressed_matrix_"${TARGET_WORD}".npy \
   --log-dir data/train_logs/log_"${TARGET_WORD}" \
   --output-path data/umap-"${SAMPLES}"-"${NEIGHBORS}"-"${DIM}"d-"${LMODEL}"-models/model-"${TARGET_WORD}".ptch \
   --epochs 500
-#  --gpu
+##  --gpu
 
-echo "Trained encoder"
+echo "Combined models"
 ## Merge encoders for each word into a single model
 python -m mini_coil.data_pipeline.combine_models \
   --models-dir "${CURRENT_DIR}/data/umap-${SAMPLES}-${NEIGHBORS}-${DIM}d-${LMODEL}-models" \

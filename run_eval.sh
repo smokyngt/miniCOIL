@@ -54,6 +54,26 @@ function evaluate() {
       --eval-margin 0.01
 }
 
+function umap_compare() {
+    python -m tests.04_umap_emb \
+      --embeddings "${CURRENT_DIR}/tests/em/mixedbread.npy" \
+      --output-umap "${CURRENT_DIR}/tests/em/mixedbread_umap.npy" \
+      --umap-components 4 \
+      --n-neighbors 20
+
+    python -m tests.02_matrix_create \
+            --input "${CURRENT_DIR}/tests/em/mixedbread_umap.npy" \
+            --output "${CURRENT_DIR}/tests/em/distance_matrix_mixedbread_umap.npy"
+
+    python -m tests.03_matrix_triplets \
+      --distance-matrix-base-path "${CURRENT_DIR}/tests/em/distance_matrix_mixedbread.npy" \
+      --distance-matrix-eval-path "${CURRENT_DIR}/tests/em/distance_matrix_mixedbread_umap.npy" \
+      --sample-size 100000 \
+      --base-margin 0.1 \
+      --eval-margin 0.01
+}
+
 create_embeddings
 create_matrix
 evaluate
+#umap_compare  # optional
