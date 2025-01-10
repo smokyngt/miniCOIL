@@ -9,7 +9,8 @@ from ipdb import launch_ipdb_on_exception
 from lightning.pytorch.loggers import CSVLogger
 
 from mini_coil.model.word_encoder import WordEncoder
-from mini_coil.training.word_module import WordModule
+from mini_coil.training.contrastive_dataloader import ContrastiveLoader
+from mini_coil.training.word_module import WordModule, ContrastiveWordModule
 
 
 def get_encoder(input_dim, output_dim, dropout: float = 0.05):
@@ -68,6 +69,7 @@ def split_train_val(embeddings: np.ndarray, target: np.ndarray, val_size=0.1):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--embedding-path", type=str)
+    parser.add_argument("--distance-matrix-path", type=str)
     parser.add_argument("--target-path", type=str)
     parser.add_argument('--output-path', type=str)
     parser.add_argument('--log-dir', type=str)
@@ -117,15 +119,40 @@ def main():
     default_batch_size = args.batch_size
     val_batch = min(val_embeddings.shape[0] - 1, default_batch_size)
 
-    train_loader = DataLoader(train_embeddings, train_target, batch_size=args.batch_size, use_cuda=args.gpu)
-    valid_loader = DataLoader(val_embeddings, val_target, use_cuda=args.gpu, batch_size=val_batch)
+    # # OLD VERSION
+    # train_loader = DataLoader(
+    #     train_embeddings,
+    #     train_target,
+    #     batch_size=args.batch_size,
+    #     use_cuda=args.gpu
+    # )
+    # valid_loader = DataLoader(
+    #     val_embeddings,
+    #     val_target,
+    #     use_cuda=args.gpu,
+    #     batch_size=val_batch
+    # )
 
-    with launch_ipdb_on_exception():
-        trainer.fit(
-            model=WordModule(encoder_prepared, lr=args.lr, factor=args.factor, patience=args.patience),
-            train_dataloaders=train_loader,
-            val_dataloaders=valid_loader
-        )
+    train_loader = ContrastiveLoader(
+        embeddings=train_embeddings,
+        targets=train_target,
+        batch_size=args.batch_size
+    )
+    valid_loader = ContrastiveLoader(
+        embeddings=val_embeddings,
+        targets=val_target,
+        batch_size=val_batch
+    )
+    # with launch_ipdb_on_exception():
+    trainer.fit(
+        model=ContrastiveWordModule(
+            encoder_prepared,
+            lr=args.lr,
+            factor=args.factor,
+            patience=args.patience),
+        train_dataloaders=train_loader,
+        val_dataloaders=valid_loader
+    )
 
     output_dir = os.path.dirname(args.output_path)
 
@@ -136,9 +163,6 @@ def main():
 
     # Try to read the saved model
     encoder_load = get_encoder(input_dim, output_dim)
-
-    # encoder_load.qconfig = torch.ao.quantization.get_default_qat_qconfig('x86')
-    # encoder_prepared_load = torch.ao.quantization.prepare_qat(encoder_load)
     encoder_load.load_state_dict(torch.load(args.output_path, weights_only=True))
 
 

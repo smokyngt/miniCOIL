@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, Dict, Union
+from typing import Any, Dict, Union, Optional
 
 import torch
 from torch import LongTensor, Tensor
@@ -49,6 +49,19 @@ class Distance(str, Enum):
     DOT_PRODUCT = "dot_product"
     MANHATTAN = "manhattan"
 
+class CosineDistance:
+    def distance(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+        x_norm = x / (x.norm(dim=1, keepdim=True) + 1e-9)
+        y_norm = y / (y.norm(dim=1, keepdim=True) + 1e-9)
+        return 1.0 - (x_norm * y_norm).sum(dim=1)
+
+    def distance_matrix(self, x: torch.Tensor, y: Optional[torch.Tensor] = None) -> torch.Tensor:
+        if y is None:
+            y = x
+        x_norm = x / (x.norm(dim=1, keepdim=True) + 1e-9)
+        y_norm = y / (y.norm(dim=1, keepdim=True) + 1e-9)
+        return 1.0 - x_norm.mm(y_norm.t())
+
 
 class ContrastiveLoss(torch.nn.Module):
     """Contrastive loss.
@@ -70,13 +83,13 @@ class ContrastiveLoss(torch.nn.Module):
 
     def __init__(
             self,
-            distance_metric_name: Distance = Distance.COSINE,
             margin: float = 0.5,
             size_average: bool = True,
     ):
-        super().__init__(distance_metric_name=distance_metric_name)
+        super().__init__()
         self.margin = margin
         self.size_average = size_average
+        self.distance_metric = CosineDistance()
 
     def get_config_dict(self) -> Dict[str, Any]:
         """Config used in saving and loading purposes.

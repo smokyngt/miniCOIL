@@ -105,6 +105,7 @@ def main():
     parser.add_argument("--vocab-path", type=str)
     parser.add_argument("--word-encoder-path", type=str)
     parser.add_argument("--sentences", type=str, nargs='+')
+    parser.add_argument("--dim", type=int, default=4)
     args = parser.parse_args()
 
     # Catch exception with ipdb
@@ -112,7 +113,8 @@ def main():
     with ipdb.launch_ipdb_on_exception():
         model = MiniCOIL(
             vocab_path=args.vocab_path,
-            word_encoder_path=args.word_encoder_path
+            word_encoder_path=args.word_encoder_path,
+            output_dim=args.dim,
         )
 
         for embeddings in model.encode(args.sentences):
