@@ -37,7 +37,8 @@ def split_train_val(
         range_from=from_train,
         range_to=to_train,
         batch_size=batch_size,
-        epoch_size=64_000
+        epoch_size=64_000,
+        min_margin=0.1
     )
 
     val_dataloader = TripletDataloader(
@@ -46,7 +47,8 @@ def split_train_val(
         range_from=from_val,
         range_to=to_val,
         batch_size=batch_size,
-        epoch_size=6400
+        epoch_size=6400,
+        min_margin=0.1
     )
 
     return train_dataloader, val_dataloader

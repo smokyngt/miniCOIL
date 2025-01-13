@@ -7,7 +7,7 @@ set -o pipefail # exit on error in pipe
 CURRENT_DIR=$(pwd -L)
 #COLLECTION_NAME=$1
 TARGET_WORD=vector
-DIM=4
+DIM=2
 SAMPLES=8000
 LMODEL=mxbai-large
 IMODEL=jina-small
@@ -46,10 +46,27 @@ python -m mini_coil.training.train_word_triplet \
 
 echo "Trained model"
 
+MODEL_PATH="data/model_triplet_${SAMPLES}_${DIM}d"
+
 ## Merge encoders for each word into a single model
 python -m mini_coil.data_pipeline.combine_models \
   --models-dir ${INPUT_DIR}-${IMODEL}-${DIM}/word-models \
   --vocab-path "${CURRENT_DIR}/data/30k-vocab-filtered.txt" \
-  --output-path "data/model_triplet_${SAMPLES}_${DIM}d" \
+  --output-path $MODEL_PATH \
   --output-dim "${DIM}"
+
+# Embed a bunch of sentences
+
+python -m tests.embed_minicoil \
+  --vocab-path ${MODEL_PATH}.vocab \
+  --word-encoder-path ${MODEL_PATH}.npy \
+  --input-file data/validation/${TARGET_WORD}-validation.txt \
+  --word ${TARGET_WORD} \
+  --output ${INPUT_DIR}-${IMODEL}-${DIM}/validation/${TARGET_WORD}-validation.npy
+
+# Plot the embeddings
+
+python -m tests.visualize_embeddings \
+  --input ${INPUT_DIR}-${IMODEL}-${DIM}/validation/${TARGET_WORD}-validation.npy \
+  --output ${INPUT_DIR}-${IMODEL}-${DIM}/validation-viz/${TARGET_WORD}-plot
 

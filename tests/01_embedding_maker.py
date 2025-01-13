@@ -56,7 +56,6 @@ def main():
             vocab_path=args.vocab_path,
             word_encoder_path=args.word_encoder_path,
             sentence_encoder_model="jinaai/jina-embeddings-v2-small-en-tokens",
-            output_dim=args.dim
         )
         emb_mc_list = []
         for line in lines:
