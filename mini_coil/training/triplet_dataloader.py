@@ -54,52 +54,46 @@ class TripletDataloader:
             self,
             embeddings: np.ndarray,
             similarity_matrix: np.ndarray,
+            line_numbers: np.ndarray,
             min_margin: float = 0.1,
             batch_size: int = 32,
             # Subset of the similarity matrix to use
             range_from: int = 0,
             range_to: int = None,
-            epoch_size: int = 3200
+            epoch_size: int = 3200,
     ):
         self.embeddings = embeddings
-
+        self.line_numbers = line_numbers
         self.min_margin = min_margin
         self.batch_size = batch_size
         self.range_from = range_from
         self.range_to = range_to or similarity_matrix.shape[0]
-        self.distance_matrix = 1.0 - similarity_matrix[self.range_from:self.range_to, self.range_from:self.range_to]
+        self.distance_matrix = similarity_matrix
         self.epoch_size = epoch_size
 
     def __iter__(self) -> Iterable[Dict[str, np.ndarray]]:
-        embeddings = []
+        rows = []
         triplets = []
         margins = []
-
         n = 0
         for anchor, positive, negative, margin in sample_triplets(self.distance_matrix, self.min_margin):
-            length = len(embeddings)
-
-            n += 1
-            if n >= self.epoch_size:
-                break
-
-            triplets.append((length, length + 1, length + 2))
-
-            embeddings.append(self.embeddings[anchor + self.range_from])
-            embeddings.append(self.embeddings[positive + self.range_from])
-            embeddings.append(self.embeddings[negative + self.range_from])
-
+            rows.append(self.embeddings[self.line_numbers[anchor]])
+            rows.append(self.embeddings[self.line_numbers[positive]])
+            rows.append(self.embeddings[self.line_numbers[negative]])
+            triplets.append((len(rows) - 3, len(rows) - 2, len(rows) - 1))
             margins.append(margin)
-
+            n += 1
             if len(triplets) >= self.batch_size:
                 yield {
-                    "embeddings": np.array(embeddings),
+                    "embeddings": np.array(rows),
                     "triplets": np.array(triplets),
                     "margins": np.array(margins)
                 }
-                embeddings = []
+                rows = []
                 triplets = []
                 margins = []
+            if n >= self.epoch_size:
+                break
 
 def test_triplet_dataloader():
     embeddings = np.array([

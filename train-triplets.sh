@@ -16,26 +16,29 @@ IMODEL=jina-small
 INPUT_DIR=data/triplets-${SAMPLES}-${LMODEL}
 
 #echo "Generate distance matrix for given word"
-python -m mini_coil.data_pipeline.distance_matrix \
-       --word ${TARGET_WORD} \
-       --output-matrix ${INPUT_DIR}/distance_matrix/dm-${TARGET_WORD}.npy \
-       --output-sentences ${INPUT_DIR}/target_sentences/sentences-${TARGET_WORD}.jsonl \
-       --sample-size ${SAMPLES}
+#python -m mini_coil.data_pipeline.distance_matrix \
+#       --word ${TARGET_WORD} \
+#       --output-matrix ${INPUT_DIR}/distance_matrix/dm-${TARGET_WORD}.npy \
+#       --output-sentences ${INPUT_DIR}/target_sentences/sentences-${TARGET_WORD}.jsonl \
+#       --sample-size ${SAMPLES}
+
+echo "Augmented data"
+python -m mini_coil.data_pipeline.augment_data \
+  --input-file ${INPUT_DIR}/target_sentences/sentences-${TARGET_WORD}.jsonl \
+  --output-file ${INPUT_DIR}/target_sentences/sentences-${TARGET_WORD}-augmented.jsonl \
+  --target-word "${TARGET_WORD}"
 
 echo "Loaded sentences"
 
 # Encode sentences with smaller transformer model
 python -m mini_coil.data_pipeline.encode_and_filter \
-   --sentences-file ${INPUT_DIR}/target_sentences/sentences-${TARGET_WORD}.jsonl \
+   --sentences-file ${INPUT_DIR}/target_sentences/sentences-${TARGET_WORD}-augmented.jsonl \
    --output-file ${INPUT_DIR}-${IMODEL}/word-emb-${TARGET_WORD}.npy \
    --word "${TARGET_WORD}" \
    --sample-size "${SAMPLES}"
 
 echo "Encoded sentences"
-
-
 #Train encoder **for each word**
-
 python -m mini_coil.training.train_word_triplet \
   --embedding-path ${INPUT_DIR}-${IMODEL}/word-emb-${TARGET_WORD}.npy \
   --distance-matrix-path ${INPUT_DIR}/distance_matrix/dm-${TARGET_WORD}.npy \

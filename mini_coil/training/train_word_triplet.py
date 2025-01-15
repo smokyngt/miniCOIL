@@ -5,7 +5,7 @@ from typing import Tuple
 import lightning as L
 import numpy as np
 import torch
-from lightning.pytorch.loggers import CSVLogger, TensorBoardLogger
+from lightning.pytorch.loggers import TensorBoardLogger
 
 from mini_coil.model.word_encoder import WordEncoder
 from mini_coil.training.triplet_dataloader import TripletDataloader
@@ -23,8 +23,9 @@ def get_encoder(input_dim, output_dim, dropout: float = 0.05):
 def split_train_val(
         embeddings: np.ndarray,
         similarity_matrix: np.ndarray,
+        line_numbers: np.ndarray,
         batch_size: int = 32,
-        val_size=0.2
+        val_size=0.2,
 ) -> Tuple[TripletDataloader, TripletDataloader]:
     from_train = 0
     from_val = int(embeddings.shape[0] * (1 - val_size))
@@ -33,6 +34,7 @@ def split_train_val(
 
     train_dataloader = TripletDataloader(
         embeddings=embeddings,
+        line_numbers=line_numbers,
         similarity_matrix=similarity_matrix,
         range_from=from_train,
         range_to=to_train,
@@ -43,6 +45,7 @@ def split_train_val(
 
     val_dataloader = TripletDataloader(
         embeddings=embeddings,
+        line_numbers=line_numbers,
         similarity_matrix=similarity_matrix,
         range_from=from_val,
         range_to=to_val,
@@ -75,11 +78,17 @@ def main():
 
     embedding = np.load(args.embedding_path)
 
+    line_numbers_path = os.path.join(os.path.dirname(args.embedding_path), "line_numbers.npy")
+    if not os.path.exists(line_numbers_path):
+        raise FileNotFoundError(f"Expected line numbers file: {line_numbers_path}")
+    line_numbers = np.load(line_numbers_path)
+
     distance_matrix = np.load(args.distance_matrix_path)
 
     train_loader, valid_loader = split_train_val(
-        embedding,
-        distance_matrix,
+        embeddings=embedding,
+        similarity_matrix=distance_matrix,
+        line_numbers=line_numbers,
         val_size=args.val_size,
         batch_size=args.batch_size
     )
@@ -91,7 +100,7 @@ def main():
 
     encoder_prepared = encoder_load
 
-    accelerator = 'cpu'
+    accelerator = 'gpu'
     torch.set_num_threads(1)
 
     trainer = L.Trainer(
