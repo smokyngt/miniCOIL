@@ -28,9 +28,10 @@ def split_train_val(
         val_size=0.2,
 ) -> Tuple[TripletDataloader, TripletDataloader]:
     from_train = 0
-    from_val = int(embeddings.shape[0] * (1 - val_size))
+    total_size = min(similarity_matrix.shape[0], len(line_numbers))
+    from_val = int(total_size * (1 - val_size))
     to_train = from_val
-    to_val = embeddings.shape[0]
+    to_val = total_size
 
     train_dataloader = TripletDataloader(
         embeddings=embeddings,

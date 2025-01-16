@@ -67,8 +67,14 @@ class TripletDataloader:
         self.min_margin = min_margin
         self.batch_size = batch_size
         self.range_from = range_from
-        self.range_to = range_to or similarity_matrix.shape[0]
-        self.distance_matrix = similarity_matrix
+
+        max_range = min(similarity_matrix.shape[0], len(line_numbers))
+        self.range_to = range_to if range_to is not None else max_range
+
+        used_indices = self.line_numbers[self.range_from:self.range_to]
+        submatrix = similarity_matrix[used_indices][:, used_indices]
+
+        self.distance_matrix = 1.0 - submatrix
         self.epoch_size = epoch_size
 
     def __iter__(self) -> Iterable[Dict[str, np.ndarray]]:
@@ -77,9 +83,10 @@ class TripletDataloader:
         margins = []
         n = 0
         for anchor, positive, negative, margin in sample_triplets(self.distance_matrix, self.min_margin):
-            rows.append(self.embeddings[self.line_numbers[anchor]])
-            rows.append(self.embeddings[self.line_numbers[positive]])
-            rows.append(self.embeddings[self.line_numbers[negative]])
+            rows.append(self.embeddings[self.line_numbers[anchor + self.range_from]])
+            rows.append(self.embeddings[self.line_numbers[positive + self.range_from]])
+            rows.append(self.embeddings[self.line_numbers[negative + self.range_from]])
+
             triplets.append((len(rows) - 3, len(rows) - 2, len(rows) - 1))
             margins.append(margin)
             n += 1
