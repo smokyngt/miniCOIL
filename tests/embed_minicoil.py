@@ -6,6 +6,17 @@ import tqdm
 
 from mini_coil.model.mini_coil_inference import MiniCOIL
 
+ANECDOTAL_EXAMPLES = {
+    "vector": [
+        "vector search",
+        "vector index",
+        "vector space",
+        "vector image",
+        "vector graphics",
+        "vector illustration",
+    ]
+}
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -26,10 +37,9 @@ def main():
 
     lines = open(args.input_file).read().splitlines()
 
-    encoded = model_minicoil.encode(tqdm.tqdm(lines))
+    encoded = model_minicoil.encode(tqdm.tqdm(lines), parallel=4)
 
     for row in encoded:
-        v = []
         if args.word not in row:
             zeros = np.zeros((model_minicoil.output_dim,))
             emb_mc_list.append(zeros)
@@ -41,6 +51,15 @@ def main():
     os.makedirs(os.path.dirname(args.output), exist_ok=True)
 
     np.save(args.output, emb_mc)
+
+    # If the word happens to be in the anecdotal examples, print the embeddings
+    if args.word in ANECDOTAL_EXAMPLES:
+        examples = ANECDOTAL_EXAMPLES[args.word]
+        encoded = model_minicoil.encode(examples)
+        for example, row in zip(examples, encoded):
+            word_emb = row[args.word]["embedding"]
+            print(word_emb, " - ", example)
+
 
 if __name__ == "__main__":
     main()

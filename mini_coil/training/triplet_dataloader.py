@@ -71,10 +71,12 @@ class TripletDataloader:
         max_range = min(similarity_matrix.shape[0], len(line_numbers))
         self.range_to = range_to if range_to is not None else max_range
 
-        used_indices = self.line_numbers[self.range_from:self.range_to]
-        submatrix = similarity_matrix[used_indices][:, used_indices]
+        self.matrix_to_embeddings = [[] for _ in range(similarity_matrix.shape[0])]
+        for i, line_number in enumerate(line_numbers.tolist()):
+            self.matrix_to_embeddings[line_number].append(i)
 
-        self.distance_matrix = 1.0 - submatrix
+        self.distance_matrix = 1.0 - similarity_matrix[self.range_from:self.range_to, self.range_from:self.range_to]
+
         self.epoch_size = epoch_size
 
     def __iter__(self) -> Iterable[Dict[str, np.ndarray]]:
@@ -83,9 +85,13 @@ class TripletDataloader:
         margins = []
         n = 0
         for anchor, positive, negative, margin in sample_triplets(self.distance_matrix, self.min_margin):
-            rows.append(self.embeddings[self.line_numbers[anchor + self.range_from]])
-            rows.append(self.embeddings[self.line_numbers[positive + self.range_from]])
-            rows.append(self.embeddings[self.line_numbers[negative + self.range_from]])
+            anchor_emb_id = random.choice(self.matrix_to_embeddings[anchor + self.range_from])
+            positive_emb_id = random.choice(self.matrix_to_embeddings[positive + self.range_from])
+            negative_emb_id = random.choice(self.matrix_to_embeddings[negative + self.range_from])
+
+            rows.append(self.embeddings[anchor_emb_id])
+            rows.append(self.embeddings[positive_emb_id])
+            rows.append(self.embeddings[negative_emb_id])
 
             triplets.append((len(rows) - 3, len(rows) - 2, len(rows) - 1))
             margins.append(margin)
@@ -105,7 +111,9 @@ class TripletDataloader:
 def test_triplet_dataloader():
     embeddings = np.array([
         [1, 0, 0, 0],
+        [1.1, 0, 0, 0],
         [0, 1, 0, 0],
+        [0, 1.1, 0, 0],
         [0, 0, 1, 0],
         [0, 0, 0, 1]
     ])
@@ -114,13 +122,24 @@ def test_triplet_dataloader():
         [1, 0.5, 0.1, 0.2],
         [0.5, 1, 0.3, 0.4],
         [0.1, 0.3, 1, 0.5],
-        [0.2, 0.4, 0.5, 1]
+        [0.2, 0.4, 0.5, 1],
     ])
 
-    dataloader = TripletDataloader(embeddings, similarity_matrix, min_margin=0.1, batch_size=2, range_from=0,
-                                   range_to=4)
+    line_numbers = np.array([0, 0, 1, 1, 2, 3])
+
+    dataloader = TripletDataloader(
+        embeddings,
+        similarity_matrix,
+        line_numbers,
+        min_margin=0.1,
+        batch_size=2,
+        range_from=0,
+        range_to=4
+    )
 
     batch = next(iter(dataloader))
+
+    print(dataloader.matrix_to_embeddings)
 
     print(batch["embeddings"])
     print(batch["triplets"])

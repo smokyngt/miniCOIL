@@ -16,11 +16,11 @@ logger = logging.getLogger(__name__)
 def extract_window_around_target(
         words: List[str],
         target_idx: int,
-        min_words: int = 2,
-        max_words: int = 4
+        min_words: int = 4,
+        max_words: int = 6
 ) -> Tuple[int, int]:
-    left_window = random.randint(0, 2)
-    right_window = random.randint(0, 2)
+    left_window = random.randint(1, 3)
+    right_window = random.randint(1, 3)
 
     start = max(0, target_idx - left_window)
     end = min(len(words), target_idx + right_window + 1)

@@ -25,7 +25,7 @@ def read_sentences(file_path: str, limit_length: int = 4096) -> Iterable[Dict[st
             }
 
 
-def encode_and_filter(model_name: Optional[str], word: str, docs: List[str]) -> Iterable[np.ndarray]:
+def encode_and_filter(model_name: Optional[str], word: str, docs: List[dict]) -> Iterable[np.ndarray]:
     model = load_model(model_name)
     vocab_resolver = VocabResolver(tokenizer=VocabTokenizerTokenizer(model.tokenizer))
     vocab_resolver.add_word(word)
@@ -51,7 +51,6 @@ def main():
     parser.add_argument("--sentences-file", type=str)
     parser.add_argument("--output-file", type=str)
     parser.add_argument("--word", type=str)
-    parser.add_argument("--sample-size", type=int, default=4000)
     args = parser.parse_args()
 
     model_name = "jinaai/jina-embeddings-v2-small-en-tokens"
@@ -72,7 +71,7 @@ def main():
     line_numbers_file = os.path.join(os.path.dirname(output_file), "line_numbers.npy")
     line_numbers = []
 
-    for doc, emb in tqdm.tqdm(zip(docs, embeddings), total=args.sample_size):
+    for doc, emb in tqdm.tqdm(zip(docs, embeddings), total=len(docs)):
         emb_conv = emb.reshape(1, -1)
         text_np_emb_file.append(emb_conv)
         line_numbers.append(int(doc["line_number"]))
