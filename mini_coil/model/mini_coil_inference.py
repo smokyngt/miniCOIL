@@ -46,7 +46,7 @@ class MiniCOIL:
         assert self.word_encoder.input_dim == self.input_dim
         self.output_dim = self.word_encoder.output_dim
 
-    def encode(self, sentences: Iterable[str]) -> List[dict]:
+    def encode(self, sentences: Iterable[str], parallel=None) -> List[dict]:
         """
         Encode the given word in the context of the sentences.
         """
@@ -56,7 +56,7 @@ class MiniCOIL:
         result = []
 
         with torch.no_grad():
-            for embedding, sentence in zip(self.sentence_encoder.embed(sentences1, batch_size=4), sentences2):
+            for embedding, sentence in zip(self.sentence_encoder.embed(sentences1, batch_size=4, parallel=parallel), sentences2):
                 token_ids = np.array(self.sentence_encoder.tokenize([sentence])[0].ids)
 
                 word_ids, counts, oov, forms = self.vocab_resolver.resolve_tokens(token_ids)
@@ -116,7 +116,6 @@ def main():
         model = MiniCOIL(
             vocab_path=args.vocab_path,
             word_encoder_path=args.word_encoder_path,
-            output_dim=args.dim,
         )
 
         for embeddings in model.encode(args.sentences):

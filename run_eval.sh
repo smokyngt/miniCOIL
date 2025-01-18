@@ -6,10 +6,10 @@ set -o pipefail # exit on error in pipe
 
 mkdir -p tests/em/t || true
 CURRENT_DIR=$(pwd -L)
-DIM=4
+DIM=2
 
-WORD_TO_TEST=bat
-MINICOIL_MODEL=model_4000_"${DIM}"d
+WORD_TO_TEST=vector
+MINICOIL_MODEL=model_triplet_8000_"${DIM}"d
 
 SENTENCES_FILE="${CURRENT_DIR}/data/${WORD_TO_TEST}-valid-sample-1000.txt"
 

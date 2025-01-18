@@ -62,6 +62,9 @@ def main():
 
     combined_params_numpy = combined_params.numpy()
 
+    # Make sure the output directory exists
+    os.makedirs(os.path.dirname(args.output_path), exist_ok=True)
+
     # Save numpy file as well
     np.save(args.output_path + ".npy", combined_params_numpy)
 
