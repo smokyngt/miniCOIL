@@ -6,12 +6,12 @@ set -o pipefail # exit on error in pipe
 
 mkdir -p tests/em/t || true
 CURRENT_DIR=$(pwd -L)
-DIM=2
+DIM=4
 
 WORD_TO_TEST=vector
-MINICOIL_MODEL=model_triplet_8000_"${DIM}"d
+MINICOIL_MODEL=triplets-8000-mxbai-large-jina-small-${DIM}-augmented/full-models/model
 
-SENTENCES_FILE="${CURRENT_DIR}/data/${WORD_TO_TEST}-valid-sample-1000.txt"
+SENTENCES_FILE="${CURRENT_DIR}/data/validation/${WORD_TO_TEST}-validation.txt"
 
 
 function create_embeddings() {

@@ -11,8 +11,8 @@ import argparse
 
 DEFAULT_SAMPLE_SIZE = 4000
 
-QDRANT_URL = os.environ.get("QDRANT_URL", os.getenv("QDRANT_URL", "http://localhost:80"))
-QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", os.getenv("QDRANT_API_KEY", ""))
+QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:80")
+QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", "")
 
 
 def query_sentences(
@@ -20,9 +20,14 @@ def query_sentences(
         word: str,
         sample_size: int = DEFAULT_SAMPLE_SIZE,
 ) -> tuple[np.ndarray, list[dict]]:
+
+    print(QDRANT_URL, QDRANT_API_KEY)
     qdrant = QdrantClient(
         url=QDRANT_URL,
-        api_key=QDRANT_API_KEY, port=80, timeout=1000)
+        api_key=QDRANT_API_KEY,
+        timeout=1000,
+    )
+
 
     response = qdrant.query_points(
         collection_name=collection_name,

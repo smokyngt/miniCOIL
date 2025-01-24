@@ -6,9 +6,9 @@ set -o pipefail # exit on error in pipe
 
 CURRENT_DIR=$(pwd -L)
 #COLLECTION_NAME=$1
-TARGET_WORD=vector
+TARGET_WORD=bat
 DIM=4
-SAMPLES=4000
+SAMPLES=8000
 LMODEL=mxbai-large
 IMODEL=jina-small
 
@@ -20,58 +20,95 @@ MODEL_DIR=${INPUT_DIR}-${IMODEL}-${DIM}-augmented
 WORD_MODELS_DIR=${MODEL_DIR}/word-models
 FULL_MODEL_DIR=${MODEL_DIR}/full-models
 
-echo "Generate distance matrix for given word"
-python -m mini_coil.data_pipeline.distance_matrix \
-       --word ${TARGET_WORD} \
-       --output-matrix ${INPUT_DIR}/distance_matrix/dm-${TARGET_WORD}.npy \
-       --output-sentences ${INPUT_DIR}/target_sentences/sentences-${TARGET_WORD}.jsonl \
-       --sample-size ${SAMPLES}
 
-echo "Augmented data"
-python -m mini_coil.data_pipeline.augment_data \
-  --input-file ${INPUT_DIR}/target_sentences/sentences-${TARGET_WORD}.jsonl \
-  --output-file ${INPUT_DIR}/target_sentences/sentences-${TARGET_WORD}-augmented.jsonl \
-  --target-word "${TARGET_WORD}"
+generate_distance_matrix() {
+  echo "Generate distance matrix for given word"
+  python -m mini_coil.data_pipeline.distance_matrix \
+         --word ${TARGET_WORD} \
+         --output-matrix ${INPUT_DIR}/distance_matrix/dm-${TARGET_WORD}.npy \
+         --output-sentences ${INPUT_DIR}/target_sentences/sentences-${TARGET_WORD}.jsonl \
+         --sample-size ${SAMPLES}
 
-echo "Loaded sentences"
+}
 
-# Encode sentences with smaller transformer model
-python -m mini_coil.data_pipeline.encode_and_filter \
-   --sentences-file ${INPUT_DIR}/target_sentences/sentences-${TARGET_WORD}-augmented.jsonl \
-   --output-file ${INPUT_DIR}-${IMODEL}/word-emb-${TARGET_WORD}.npy \
-   --word "${TARGET_WORD}"
 
-echo "Encoded sentences"
-#Train encoder **for each word**
-python -m mini_coil.training.train_word_triplet \
-  --embedding-path ${INPUT_DIR}-${IMODEL}/word-emb-${TARGET_WORD}.npy \
-  --distance-matrix-path ${INPUT_DIR}/distance_matrix/dm-${TARGET_WORD}.npy \
-  --output-dim ${DIM} \
-  --output-path ${MODEL_DIR}/model-${TARGET_WORD}.ptch \
-  --log-dir ${INPUT_DIR}-${IMODEL}-augmented/train_logs/log_"${TARGET_WORD}" \
-  --epochs 100
+augment_data() {
+  python -m mini_coil.data_pipeline.augment_data \
+    --input-file ${INPUT_DIR}/target_sentences/sentences-${TARGET_WORD}.jsonl \
+    --output-file ${INPUT_DIR}/target_sentences/sentences-${TARGET_WORD}-augmented.jsonl \
+    --target-word "${TARGET_WORD}"
+  echo "Augmented data"
+}
 
-echo "Trained model"
 
-## Merge encoders for each word into a single model
-python -m mini_coil.data_pipeline.combine_models \
-  --models-dir ${MODEL_DIR} \
-  --vocab-path "${CURRENT_DIR}/data/30k-vocab-filtered.txt" \
-  --output-path ${FULL_MODEL_DIR}/model \
-  --output-dim "${DIM}"
+encode_sentences() {
+  # Encode sentences with smaller transformer model
+  python -m mini_coil.data_pipeline.encode_and_filter \
+     --sentences-file ${INPUT_DIR}/target_sentences/sentences-${TARGET_WORD}-augmented.jsonl \
+     --output-file ${INPUT_DIR}-${IMODEL}/word-emb-${TARGET_WORD}.npy \
+     --word "${TARGET_WORD}"
+  echo "Encoded sentences"
+}
 
-# Embed a bunch of sentences
 
-python -m tests.embed_minicoil \
-  --vocab-path ${FULL_MODEL_DIR}/model.vocab \
-  --word-encoder-path ${FULL_MODEL_DIR}/model.npy \
-  --input-file data/validation/${TARGET_WORD}-validation.txt \
-  --word ${TARGET_WORD} \
-  --output ${WORD_MODELS_DIR}/validation/${TARGET_WORD}-validation.npy
+train_encoder() {
+  #Train encoder **for each word**
+  python -m mini_coil.training.train_word_triplet \
+    --embedding-path ${INPUT_DIR}-${IMODEL}/word-emb-${TARGET_WORD}.npy \
+    --distance-matrix-path ${INPUT_DIR}/distance_matrix/dm-${TARGET_WORD}.npy \
+    --output-dim ${DIM} \
+    --output-path ${MODEL_DIR}/model-${TARGET_WORD}.ptch \
+    --log-dir ${INPUT_DIR}-${IMODEL}-augmented/train_logs/log_"${TARGET_WORD}" \
+    --epochs 100
+  echo "Trained model"
+}
 
-# Plot the embeddings
 
-python -m tests.visualize_embeddings \
-  --input ${WORD_MODELS_DIR}/validation/${TARGET_WORD}-validation.npy \
-  --output ${WORD_MODELS_DIR}/validation-viz/${TARGET_WORD}-plot
+combine_models() {
+  ## Merge encoders for each word into a single model
+  python -m mini_coil.data_pipeline.combine_models \
+    --models-dir ${MODEL_DIR} \
+    --vocab-path "${CURRENT_DIR}/data/30k-vocab-filtered.txt" \
+    --output-path ${FULL_MODEL_DIR}/model \
+    --output-dim "${DIM}"
+}
 
+
+download_validation_data() {
+  # Download validation data
+  python -m mini_coil.data_pipeline.download_validation \
+    --word ${TARGET_WORD} \
+    --output-sentences data/validation/${TARGET_WORD}-validation.txt
+}
+
+
+embed_sentences() {
+  # Embed a bunch of sentences
+  python -m tests.embed_minicoil \
+    --vocab-path ${FULL_MODEL_DIR}/model.vocab \
+    --word-encoder-path ${FULL_MODEL_DIR}/model.npy \
+    --input-file data/validation/${TARGET_WORD}-validation.txt \
+    --word ${TARGET_WORD} \
+    --output ${WORD_MODELS_DIR}/validation/${TARGET_WORD}-validation.npy
+}
+
+visualize_embeddings() {
+  # Plot the embeddings
+  python -m tests.visualize_embeddings \
+    --input ${WORD_MODELS_DIR}/validation/${TARGET_WORD}-validation.npy \
+    --output ${WORD_MODELS_DIR}/validation-viz/${TARGET_WORD}-plot
+}
+
+main() {
+  generate_distance_matrix
+  augment_data
+  encode_sentences
+  train_encoder
+  combine_models
+  # Validate the model
+  download_validation_data
+  embed_sentences
+  visualize_embeddings
+}
+
+main "$@"

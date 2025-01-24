@@ -14,6 +14,14 @@ ANECDOTAL_EXAMPLES = {
         "vector image",
         "vector graphics",
         "vector illustration",
+    ],
+    "bat": [
+        "baseball bat",
+        "swing a bat",
+        "aluminum bat",
+        "bat in the cave",
+        "vampire bat",
+        "bat flying",
     ]
 }
 
