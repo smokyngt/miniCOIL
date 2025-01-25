@@ -50,6 +50,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--sentences-file", type=str)
     parser.add_argument("--output-file", type=str)
+    parser.add_argument("--output-line-numbers-file", type=str)
     parser.add_argument("--word", type=str)
     args = parser.parse_args()
 
@@ -68,7 +69,7 @@ def main():
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
     text_np_emb_file = NpyAppendArray(output_file, delete_if_exists=True)
-    line_numbers_file = os.path.join(os.path.dirname(output_file), "line_numbers.npy")
+    line_numbers_file = args.output_line_numbers_file
     line_numbers = []
 
     for doc, emb in tqdm.tqdm(zip(docs, embeddings), total=len(docs)):

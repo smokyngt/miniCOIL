@@ -45,6 +45,7 @@ encode_sentences() {
   python -m mini_coil.data_pipeline.encode_and_filter \
      --sentences-file ${INPUT_DIR}/target_sentences/sentences-${TARGET_WORD}-augmented.jsonl \
      --output-file ${INPUT_DIR}-${IMODEL}/word-emb-${TARGET_WORD}.npy \
+     --output-line-numbers-file ${INPUT_DIR}-${IMODEL}/line-numbers-${TARGET_WORD}.npy \
      --word "${TARGET_WORD}"
   echo "Encoded sentences"
 }
@@ -54,6 +55,7 @@ train_encoder() {
   #Train encoder **for each word**
   python -m mini_coil.training.train_word_triplet \
     --embedding-path ${INPUT_DIR}-${IMODEL}/word-emb-${TARGET_WORD}.npy \
+    --line-numbers-path ${INPUT_DIR}-${IMODEL}/line-numbers-${TARGET_WORD}.npy \
     --distance-matrix-path ${INPUT_DIR}/distance_matrix/dm-${TARGET_WORD}.npy \
     --output-dim ${DIM} \
     --output-path ${MODEL_DIR}/model-${TARGET_WORD}.ptch \
@@ -103,6 +105,7 @@ cleaenup() {
   rm ${INPUT_DIR}/target_sentences/sentences-${TARGET_WORD}.jsonl
   rm ${INPUT_DIR}/target_sentences/sentences-${TARGET_WORD}-augmented.jsonl
   rm ${INPUT_DIR}-${IMODEL}/word-emb-${TARGET_WORD}.npy
+  rm ${INPUT_DIR}-${IMODEL}/line-numbers-${TARGET_WORD}.npy
 }
 
 main() {

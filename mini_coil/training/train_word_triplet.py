@@ -73,13 +73,13 @@ def main():
     parser.add_argument("--lr", type=float, default=2e-3)
     parser.add_argument("--factor", type=float, default=0.5)
     parser.add_argument("--patience", type=int, default=5)
-
+    parser.add_argument("--line-numbers-path", type=str)
 
     args = parser.parse_args()
 
     embedding = np.load(args.embedding_path)
 
-    line_numbers_path = os.path.join(os.path.dirname(args.embedding_path), "line_numbers.npy")
+    line_numbers_path = args.line_numbers_path
     if not os.path.exists(line_numbers_path):
         raise FileNotFoundError(f"Expected line numbers file: {line_numbers_path}")
     line_numbers = np.load(line_numbers_path)
