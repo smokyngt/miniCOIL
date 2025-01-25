@@ -5,7 +5,7 @@ from typing import Tuple
 import lightning as L
 import numpy as np
 import torch
-from lightning.pytorch.loggers import TensorBoardLogger
+from lightning.pytorch.loggers import CSVLogger
 
 from mini_coil.model.word_encoder import WordEncoder
 from mini_coil.training.triplet_dataloader import TripletDataloader
@@ -107,8 +107,8 @@ def main():
     trainer = L.Trainer(
         max_epochs=args.epochs,
         enable_checkpointing=False,
-        # logger=CSVLogger(args.log_dir),
-        logger=TensorBoardLogger(args.log_dir),
+        logger=CSVLogger(args.log_dir),
+        # logger=TensorBoardLogger(args.log_dir),
         enable_progress_bar=True,
         accelerator=accelerator,
     )
