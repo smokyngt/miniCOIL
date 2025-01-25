@@ -6,7 +6,7 @@ set -o pipefail # exit on error in pipe
 
 CURRENT_DIR=$(pwd -L)
 #COLLECTION_NAME=$1
-TARGET_WORD=life
+TARGET_WORD=${1:-"vector"}
 DIM=4
 SAMPLES=8000
 LMODEL=mxbai-large
@@ -98,6 +98,13 @@ visualize_embeddings() {
     --output ${WORD_MODELS_DIR}/validation-viz/${TARGET_WORD}-plot
 }
 
+cleaenup() {
+  rm ${INPUT_DIR}/distance_matrix/dm-${TARGET_WORD}.npy
+  rm ${INPUT_DIR}/target_sentences/sentences-${TARGET_WORD}.jsonl
+  rm ${INPUT_DIR}/target_sentences/sentences-${TARGET_WORD}-augmented.jsonl
+  rm ${INPUT_DIR}-${IMODEL}/word-emb-${TARGET_WORD}.npy
+}
+
 main() {
   generate_distance_matrix
   augment_data
@@ -108,6 +115,7 @@ main() {
   download_validation_data
   embed_sentences
   visualize_embeddings
+#  cleaenup
 }
 
 main "$@"
