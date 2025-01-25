@@ -1,8 +1,11 @@
+import json
 import os
 import argparse
 from typing import List
 
 from qdrant_client import QdrantClient, models
+
+from mini_coil.settings import DATA_DIR
 
 DEFAULT_SAMPLE_SIZE = 1000
 
@@ -11,7 +14,7 @@ QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", "")
 
 def query_sentences(
         collection_name: str,
-        word: str,
+        words: List[str],
         sample_size: int = DEFAULT_SAMPLE_SIZE,
 ) -> List[str]:
 
@@ -25,11 +28,11 @@ def query_sentences(
         collection_name=collection_name,
         query=models.SampleQuery(sample=models.Sample.RANDOM),
         query_filter=models.Filter(
-            must=[
+            should=[
                 models.FieldCondition(
                     key="sentence",
                     match=models.MatchText(text=word)
-                )
+                ) for word in words
             ]
         ),
         limit=sample_size,
@@ -41,18 +44,28 @@ def query_sentences(
 
 
 def main():
+    default_vocab_path = os.path.join(DATA_DIR, "30k-vocab-filtered.json")
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--word", type=str)
     parser.add_argument("--collection-name", type=str, default="coil-validation")
     parser.add_argument("--output-sentences", type=str)
     parser.add_argument("--sample-size", type=int, default=DEFAULT_SAMPLE_SIZE)
+    parser.add_argument("--vocab-path", type=str, default=default_vocab_path)
 
     args = parser.parse_args()
 
+    vocab = json.load(open(args.vocab_path))
+
+    if args.word not in vocab:
+        print(f"WARNING: word {args.word} not found in vocab, using as is")
+        forms = [args.word]
+    else:
+        forms = vocab[args.word]
+
     sentences = query_sentences(
         collection_name=args.collection_name,
-        word=args.word,
+        words=forms,
         sample_size=args.sample_size,
     )
 

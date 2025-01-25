@@ -4,10 +4,13 @@ Sample sentences with a specific word from qdrant and build full distance matrix
 import json
 import os
 import time
+from typing import List
 
 from qdrant_client import QdrantClient, models
 import numpy as np
 import argparse
+
+from mini_coil.settings import DATA_DIR
 
 DEFAULT_SAMPLE_SIZE = 4000
 
@@ -17,7 +20,7 @@ QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", "")
 
 def query_sentences(
         collection_name: str,
-        word: str,
+        words: List[str],
         sample_size: int = DEFAULT_SAMPLE_SIZE,
 ) -> tuple[np.ndarray, list[dict]]:
 
@@ -33,11 +36,12 @@ def query_sentences(
         collection_name=collection_name,
         query=models.SampleQuery(sample=models.Sample.RANDOM),
         query_filter=models.Filter(
-            must=[
+            should=[
                 models.FieldCondition(
                     key="sentence",
                     match=models.MatchText(text=word)
                 )
+                for word in words
             ]
         ),
         limit=sample_size,
@@ -64,18 +68,29 @@ def cosine_similarity_matrix(vectors: np.ndarray) -> np.ndarray:
 
 
 def main():
+    default_vocab_path = os.path.join(DATA_DIR, "30k-vocab-filtered.json")
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--word", type=str)
     parser.add_argument("--collection-name", type=str, default="coil")
     parser.add_argument("--output-matrix", type=str)
     parser.add_argument("--output-sentences", type=str)
     parser.add_argument("--sample-size", type=int, default=DEFAULT_SAMPLE_SIZE)
+    parser.add_argument("--vocab-path", type=str, default=default_vocab_path)
 
     args = parser.parse_args()
 
     start_time = time.time()
 
-    vectors, payloads = query_sentences(args.collection_name, args.word, args.sample_size)
+    vocab = json.load(open(args.vocab_path))
+
+    if args.word not in vocab:
+        print(f"WARNING: word {args.word} not found in vocab, using as is")
+        forms = [args.word]
+    else:
+        forms = vocab[args.word]
+
+    vectors, payloads = query_sentences(args.collection_name, forms, args.sample_size)
     elapsed_time = time.time() - start_time
     print(f"Query time: {elapsed_time}")
     distances = cosine_similarity_matrix(vectors)

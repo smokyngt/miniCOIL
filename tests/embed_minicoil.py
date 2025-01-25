@@ -22,6 +22,16 @@ ANECDOTAL_EXAMPLES = {
         "bat in the cave",
         "vampire bat",
         "bat flying",
+    ],
+    "calcul": [
+        "I know how to use calculators",
+        "open the calculator app",
+        "calculating this won't be easy",
+        "numerical calculations",
+    ],
+    "life": [
+        "How much money is sufficient to live a peaceful life?",
+        "How much money do we need to live life happily?",
     ]
 }
 

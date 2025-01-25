@@ -6,7 +6,7 @@ set -o pipefail # exit on error in pipe
 
 CURRENT_DIR=$(pwd -L)
 #COLLECTION_NAME=$1
-TARGET_WORD=bat
+TARGET_WORD=life
 DIM=4
 SAMPLES=8000
 LMODEL=mxbai-large
@@ -28,7 +28,6 @@ generate_distance_matrix() {
          --output-matrix ${INPUT_DIR}/distance_matrix/dm-${TARGET_WORD}.npy \
          --output-sentences ${INPUT_DIR}/target_sentences/sentences-${TARGET_WORD}.jsonl \
          --sample-size ${SAMPLES}
-
 }
 
 
@@ -68,7 +67,7 @@ combine_models() {
   ## Merge encoders for each word into a single model
   python -m mini_coil.data_pipeline.combine_models \
     --models-dir ${MODEL_DIR} \
-    --vocab-path "${CURRENT_DIR}/data/30k-vocab-filtered.txt" \
+    --vocab-path "${CURRENT_DIR}/data/30k-vocab-filtered.json" \
     --output-path ${FULL_MODEL_DIR}/model \
     --output-dim "${DIM}"
 }
@@ -105,7 +104,7 @@ main() {
   encode_sentences
   train_encoder
   combine_models
-  # Validate the model
+#  # Validate the model
   download_validation_data
   embed_sentences
   visualize_embeddings

@@ -1,9 +1,12 @@
 import argparse
 import json
 import logging
+import os
 import random
 import re
 from typing import Tuple, List
+
+from mini_coil.settings import DATA_DIR
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -42,17 +45,21 @@ def extract_window_around_target(
     return start, end
 
 
-def create_snippet(sentence: str, target_word: str) -> str:
+def create_snippet(sentence: str, target_word_forms: List[str]) -> str:
     words = sentence.split()
+
     if not words:
         return sentence
 
-    normalized_target = re.sub(r"[^\w]+", "", target_word.lower())
+    normalized_target_forms = set(
+        re.sub(r"\W+", "", target_word.lower())
+        for target_word in target_word_forms
+    )
 
     try:
         target_indices = [
             i for i, w in enumerate(words)
-            if re.sub(r"[^\w]+", "", w.lower()) == normalized_target
+            if re.sub(r"\W+", "", w.lower()) in normalized_target_forms
         ]
 
         if not target_indices:
@@ -68,7 +75,7 @@ def create_snippet(sentence: str, target_word: str) -> str:
         return sentence
 
 
-def process_file(input_path: str, output_path: str, target_word: str) -> None:
+def process_file(input_path: str, output_path: str, target_word_forms: List[str]) -> None:
     try:
         with open(input_path, "r", encoding="utf-8") as fin, \
                 open(output_path, "w", encoding="utf-8") as fout:
@@ -85,7 +92,7 @@ def process_file(input_path: str, output_path: str, target_word: str) -> None:
                     fout.write(json.dumps(data, ensure_ascii=False) + "\n")
 
                     data_copy = dict(data)
-                    data_copy["sentence"] = create_snippet(data["sentence"], target_word)
+                    data_copy["sentence"] = create_snippet(data["sentence"], target_word_forms)
 
                     if data_copy["sentence"] != data["sentence"]:
                         fout.write(json.dumps(data_copy, ensure_ascii=False) + "\n")
@@ -100,13 +107,24 @@ def process_file(input_path: str, output_path: str, target_word: str) -> None:
 
 
 def main():
+    default_vocab_path = os.path.join(DATA_DIR, "30k-vocab-filtered.json")
+
     parser = argparse.ArgumentParser(description="Create snippets around target words in sentences")
     parser.add_argument("--input-file", required=True, help="Path to input .jsonl file")
     parser.add_argument("--output-file", required=True, help="Path to output .jsonl file")
     parser.add_argument("--target-word", required=True, help="Target word to create snippet around")
-
+    parser.add_argument("--vocab-path", type=str, default=default_vocab_path)
     args = parser.parse_args()
-    process_file(args.input_file, args.output_file, args.target_word)
+
+    vocab = json.load(open(args.vocab_path))
+
+    if args.target_word not in vocab:
+        print(f"WARNING: word {args.target_word} not found in vocab, using as is")
+        word_forms = [args.target_word]
+    else:
+        word_forms = vocab[args.target_word]
+
+    process_file(args.input_file, args.output_file, word_forms)
 
 
 if __name__ == "__main__":
