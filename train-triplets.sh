@@ -58,7 +58,7 @@ train_encoder() {
     --output-dim ${DIM} \
     --output-path ${MODEL_DIR}/model-${TARGET_WORD}.ptch \
     --log-dir ${INPUT_DIR}-${IMODEL}-augmented/train_logs/log_"${TARGET_WORD}" \
-    --epochs 100
+    --epochs 60
   echo "Trained model"
 }
 
