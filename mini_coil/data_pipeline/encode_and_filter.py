@@ -15,7 +15,7 @@ def load_model(model_name):
     return TokenEmbeddingsModel(model_name=model_name, threads=1)
 
 
-def read_sentences(file_path: str, limit_length: int = 4096) -> Iterable[Dict[str:str, str:str]]:
+def read_sentences(file_path: str, limit_length: int = 4096) -> Iterable[Dict[str, str]]:
     with open(file_path, "r") as f:
         for line in f:
             doc = json.loads(line)
