@@ -110,12 +110,12 @@ main() {
   augment_data
   encode_sentences
   train_encoder
-  combine_models
+#  combine_models
 #  # Validate the model
-  download_validation_data
-  embed_sentences
-  visualize_embeddings
-#  cleaenup
+#  download_validation_data
+#  embed_sentences
+#  visualize_embeddings
+  cleaenup
 }
 
 main "$@"
