@@ -101,7 +101,7 @@ def main():
 
     encoder_prepared = encoder_load
 
-    accelerator = 'gpu'
+    accelerator = 'cpu'
     torch.set_num_threads(1)
 
     trainer = L.Trainer(
