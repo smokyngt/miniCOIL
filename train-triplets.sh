@@ -109,6 +109,15 @@ cleaenup() {
 }
 
 main() {
+  # Skip if the model file already exists
+  MODEL_FILE_NAME=${MODEL_DIR}/model-${TARGET_WORD}.ptch
+
+  if [ -f "$MODEL_FILE_NAME" ]; then
+    echo "Model file already exists. Skipping training."
+    exit 0
+  fi
+
+
   generate_distance_matrix
   augment_data
   encode_sentences
