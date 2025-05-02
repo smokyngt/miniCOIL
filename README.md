@@ -40,19 +40,17 @@ so for each input model we can train the encoder independently.
 So the process of training is as follows:
 
 1. Download dataset (we use openwebtext)
-2. Convert dataset into readable format with `mini_coil.data_pipeline.convert_openwebtext`
-3. Split data into sentences with `mini_coil.data_pipeline.split_sentences`
-4. Encode sentences with transformer model, save embeddings to disk (about 350M embeddings for openwebtext) with `mini_coil.data_pipeline.encode_targets`
-5. Upload encoded sentences to Qdrant, so we can sample sentences with specified words with `mini_coil.data_pipeline.upload_to_qdrant`
-6. Sample sentences with specified words and apply dimensionality reduction (we use UMAP) with `mini_coil.data_pipeline.compress_dimensions`
-   1. This step defines how miniCOIL embeddings will look like for each word, but we don't yet have a way to obtain it for arbitrary sentence.
-7. Construct a training set for the Encoder model:
-   1. Download sampled sentences with `mini_coil.data_pipeline.load_sentences`
-   2. Encode sentences with smaller transformer model, but use only token embeddings for given word with `mini_coil.data_pipeline.encode_and_filter`
-8. Train encoder **for each word** to convert word embeddings into target embeddings with `mini_coil.training.train_word`
-9. Merge encoders for each word into a single model `mini_coil.data_pipeline.combine_models`
-10. **We are here**
-11. Make visualizations
-12. Benchmark
-13. Quantize (optional)
-14. Convert to ONNX
+1. Convert dataset into readable format with `mini_coil.data_pipeline.convert_openwebtext`
+1. Split data into sentences with `mini_coil.data_pipeline.split_sentences`
+1. Encode sentences with transformer model, save embeddings to disk (about 350M embeddings for openwebtext) with `mini_coil.data_pipeline.encode_targets`
+1. Upload encoded sentences to Qdrant, so we can sample sentences with specified words with `mini_coil.data_pipeline.upload_to_qdrant`
+1. For triplet-based training - follow [train-triplets.sh](./train-triplets.sh). It will for each word:
+   1. Denerate Distance Matrix based on large embeddings
+   2. Augment sentences
+   3. Encode sentences with small model
+   4. Train per-word encoder
+1. Merge encoders for each word into a single model `mini_coil.data_pipeline.combine_models`
+1. Make visualizations
+1. Benchmark
+1. Quantize (optional)
+1. Convert to ONNX
